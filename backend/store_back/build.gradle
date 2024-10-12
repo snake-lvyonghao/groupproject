@@ -29,14 +29,32 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+
 	compileOnly 'org.projectlombok:lombok'
-	developmentOnly 'org.springframework.boot:spring-boot-devtools'
-	runtimeOnly 'com.h2database:h2'
-	runtimeOnly 'com.mysql:mysql-connector-j'
 	annotationProcessor 'org.projectlombok:lombok'
+
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+	// 数据库驱动
+	runtimeOnly 'com.h2database:h2'           // H2 开发环境使用
+	runtimeOnly 'com.mysql:mysql-connector-j' // MySQL 生产环境使用
+	runtimeOnly 'org.postgresql:postgresql:42.6.0' // PostgreSQL 驱动
+
+	// 测试依赖
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
-	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+	// gRPC 依赖
+	implementation 'net.devh:grpc-server-spring-boot-starter:2.13.0.RELEASE'
+	implementation 'net.devh:grpc-client-spring-boot-starter:2.13.0.RELEASE'
+	implementation 'com.google.protobuf:protobuf-java:3.21.12'
+
+	// Spring Integration 核心和 JDBC
+	implementation 'org.springframework.integration:spring-integration-core'
+	implementation 'org.springframework.integration:spring-integration-jdbc'
+
+	// 中间件处理
+	implementation 'org.apache.camel.springboot:camel-spring-boot-starter:3.15.0'
 }
 
 tasks.named('test') {
