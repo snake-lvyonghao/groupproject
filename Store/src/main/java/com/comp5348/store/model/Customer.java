@@ -1,4 +1,4 @@
-package com.comp5348.store.entity;
+package com.comp5348.store.model;
 
 import jakarta.persistence.*;
 import lombok.Getter;

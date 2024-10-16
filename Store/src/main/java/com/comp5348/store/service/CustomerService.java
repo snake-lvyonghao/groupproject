@@ -1,6 +1,6 @@
 package com.comp5348.store.service;
 
-import com.comp5348.store.entity.Customer;
+import com.comp5348.store.model.Customer;
 
 public class CustomerService {
     public void registerCustomer(Customer customer, String rawPassword) {

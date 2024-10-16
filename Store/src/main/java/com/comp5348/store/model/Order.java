@@ -1,4 +1,4 @@
-package com.comp5348.store.entity;
+package com.comp5348.store.model;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -20,6 +20,10 @@ public class Order {
     @ManyToOne
     @JoinColumn(name = "goods_id", nullable = false)
     private Goods goods;  // 一个订单只会涉及一种商品
+
+    @ManyToOne
+    @JoinColumn(name = "customer_id", nullable = false)
+    private Customer customer;  // 每个订单对应一个客户
 
     @Column(nullable = false)
     private int totalQuantity;  // 商品的总数量
