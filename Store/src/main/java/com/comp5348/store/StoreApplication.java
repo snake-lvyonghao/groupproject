@@ -1,13 +1,13 @@
-package com.comp5348.emailService;
+package com.comp5348.store;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class DemoApplication {
+public class StoreApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(DemoApplication.class, args);
+		SpringApplication.run(StoreApplication.class, args);
 	}
 
 }

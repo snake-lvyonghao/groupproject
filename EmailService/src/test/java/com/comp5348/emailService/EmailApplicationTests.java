@@ -1,10 +1,10 @@
-package com.comp5348.bank;
+package com.comp5348.emailService;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class DemoApplicationTests {
+class EmailApplicationTests {
 
 	@Test
 	void contextLoads() {
