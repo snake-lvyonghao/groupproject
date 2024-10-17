@@ -36,8 +36,8 @@ public class OrderWarehouseDTO {
         this.id = orderWarehouseEntity.getId();
         this.quantity = orderWarehouseEntity.getQuantity();
         if (includeRelatedEntities) {
-            this.order = new OrderDTO(orderWarehouseEntity.getOrder(), false);
-            this.warehouse = new WarehouseDTO(orderWarehouseEntity.getWarehouse(), false);
+            this.order = new OrderDTO(orderWarehouseEntity.getOrder());
+            this.warehouse = new WarehouseDTO(orderWarehouseEntity.getWarehouse());
         }
     }
 }

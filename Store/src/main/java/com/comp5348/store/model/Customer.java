@@ -3,9 +3,11 @@ package com.comp5348.store.model;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 @Getter
+@Setter
 @NoArgsConstructor
 @Entity
 public class Customer {
