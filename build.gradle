@@ -75,3 +75,26 @@ subprojects {
 		}
 	}
 }
+project(":Store") {
+	dependencies {
+		implementation project(":grpc-definitions")
+	}
+}
+
+project(":Bank") {
+	dependencies {
+		implementation project(":grpc-definitions")
+	}
+}
+
+project(":DeliveryCo") {
+	dependencies {
+		implementation project(":grpc-definitions")
+	}
+}
+
+project(":EmailService") {
+	dependencies {
+		implementation project(":grpc-definitions")
+	}
+}
