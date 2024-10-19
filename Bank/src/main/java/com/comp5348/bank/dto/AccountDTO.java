@@ -11,9 +11,11 @@ import lombok.Setter;
 public class AccountDTO {
     private Long accountId;  // 用户的账户ID
     private double balance;  // 账户余额
+    private String accountOwner; // 账户拥有者
 
     public AccountDTO(Account accountEntity) {
         this.accountId = accountEntity.getAccountId();
         this.balance = accountEntity.getBalance();
+        this.accountOwner = accountEntity.getAccountOwner();
     }
 }

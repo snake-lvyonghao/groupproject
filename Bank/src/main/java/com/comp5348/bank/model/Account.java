@@ -14,4 +14,7 @@ public class Account {
 
     @Column(nullable = false)
     private double balance;  // 账户余额
+
+    @Column(nullable = false)
+    private String accountOwner; //账户拥有者名字（对应Storeapp）
 }

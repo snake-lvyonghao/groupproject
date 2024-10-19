@@ -4,20 +4,47 @@ option java_multiple_files = true;
 option java_package = "com.comp5348.grpc";
 option java_outer_classname = "StoreBankProto";
 
-// 请求消息，用于从 Store 向 Bank 发送请求
-message PaymentRequest {
-  string orderId = 1;        // 订单号
-  string AccountName = 2;   // 客户名
-  double totalAmount = 3;    // 总金额
+
+// Prepare request and response messages
+message PrepareRequest {
+  enum Action {
+    ACTION_UNSPECIFIED = 0;
+    ADD_BALANCE = 1;
+    REDUCE_BALANCE = 2;
+  }
+
+  string customerId = 1;
+  string cusomerName = 2;
+  double money = 3;
+  Action action = 4;
+  int64 transactionId = 5;
 }
 
-// Bank 的回复消息
-message PaymentResponse {
-  string status = 1;         // 扣款状态
-  string message = 2;        // 详细消息
+message PrepareResponse {
+  bool success = 1;
+}
+
+// Commit request and response messages
+message CommitRequest {
+  int64 transactionId = 1;
+}
+
+message CommitResponse {
+  bool success = 1;
+}
+
+// Rollback request and response messages
+message RollbackRequest {
+  int64 transactionId = 1;
+}
+
+message RollbackResponse {
+  bool success = 1;
 }
 
 // 定义 Bank 服务
 service BankService {
-  rpc ProcessPayment(PaymentRequest) returns (PaymentResponse);
+  rpc Prepare (PrepareRequest) returns (PrepareResponse);
+  rpc Commit (CommitRequest) returns (CommitResponse);
+  rpc Rollback (RollbackRequest) returns (RollbackResponse);
 }
