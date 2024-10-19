@@ -1,9 +1,12 @@
 package com.comp5348.store.service;
+import com.comp5348.store.dto.GoodsDTO;
 import com.comp5348.store.model.Goods;
 import com.comp5348.store.repository.GoodsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 @Service
 public class GoodsService {
@@ -16,19 +19,19 @@ public class GoodsService {
     }
 
     @Transactional
-    public Goods createOrUpdateGoods(Goods goods) {
+    public GoodsDTO createOrUpdateGoods(Goods goods) {
         try {
             Goods savedGoods = goodsRepository.save(goods);
-            return savedGoods;
+            return new GoodsDTO(savedGoods);
 
         } catch (Exception e) {
             throw new RuntimeException("Failed to create or update goods.", e);
         }
     }
 
-    public Goods getGoodsById(long id) {
-        return goodsRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Goods not found with id: " + id));
+    public GoodsDTO getGoodsById(long id) {
+        Optional<Goods> goods = goodsRepository.findById(id);
+        return goods.map(GoodsDTO::new).orElse(null);
     }
 
     public void deleteGoodsById(long id) {

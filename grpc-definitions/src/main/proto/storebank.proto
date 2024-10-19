@@ -13,11 +13,10 @@ message PrepareRequest {
     REDUCE_BALANCE = 2;
   }
 
-  string customerId = 1;
-  string cusomerName = 2;
-  double money = 3;
-  Action action = 4;
-  int64 transactionId = 5;
+  string cusomerName = 1;
+  double money = 2;
+  Action action = 3;
+  int64 transactionId = 4;
 }
 
 message PrepareResponse {
