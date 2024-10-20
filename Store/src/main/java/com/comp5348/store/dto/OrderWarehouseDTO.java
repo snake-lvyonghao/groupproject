@@ -1,6 +1,7 @@
 package com.comp5348.store.dto;
 
 import com.comp5348.store.model.OrderWarehouse;
+import com.comp5348.store.model.WarehouseGoods;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -13,7 +14,7 @@ import lombok.Setter;
 public class OrderWarehouseDTO {
     private Long id;
     private OrderDTO order;
-    private WarehouseDTO warehouse;
+    private WarehouseGoodsDTO warehouseGoodsDTO;
     private int quantity;
 
     /**
@@ -37,7 +38,7 @@ public class OrderWarehouseDTO {
         this.quantity = orderWarehouseEntity.getQuantity();
         if (includeRelatedEntities) {
             this.order = new OrderDTO(orderWarehouseEntity.getOrder());
-            this.warehouse = new WarehouseDTO(orderWarehouseEntity.getWarehouse());
+            this.warehouseGoodsDTO = new WarehouseGoodsDTO(orderWarehouseEntity.getWarehouseGoods());
         }
     }
 }

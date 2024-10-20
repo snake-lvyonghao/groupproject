@@ -28,4 +28,8 @@ public class WarehouseService {
         Warehouse savedWarehouse = warehouseRepository.save(warehouse);
         return new WarehouseDTO(savedWarehouse);
     }
+
+    public Warehouse getWarehouseEntity(Long warehouseId) {
+        return warehouseRepository.findById(warehouseId).orElseThrow(() -> new RuntimeException("Order not found with ID: " + warehouseId));
+    }
 }

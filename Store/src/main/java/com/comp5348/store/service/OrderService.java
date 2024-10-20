@@ -1,27 +1,14 @@
 package com.comp5348.store.service;
 
-import com.comp5348.grpc.BankServiceGrpc;
-import com.comp5348.grpc.PrepareRequest;
-import com.comp5348.grpc.PrepareResponse;
-import com.comp5348.store.model.Order;
-import com.comp5348.store.model.Goods;
-import com.comp5348.store.model.Customer;
-import com.comp5348.store.repository.OrderRepository;
-import com.comp5348.store.repository.GoodsRepository;
-import com.comp5348.store.repository.CustomerRepository;
 
+import com.comp5348.store.dto.OrderDTO;
+import com.comp5348.store.model.*;
+import com.comp5348.store.repository.*;
 import jakarta.transaction.Transactional;
-import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-
-import static com.comp5348.grpc.PrepareRequest.Action.ADD_BALANCE;
-import static com.comp5348.grpc.PrepareRequest.Action.REDUCE_BALANCE;
 
 @Service
 public class OrderService {
@@ -29,27 +16,29 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final GoodsRepository goodsRepository;
     private final CustomerRepository customerRepository;
-    private final WarehouseService warehouseService;
+    private final WarehouseGoodsRepository warehouseGoodsRepository;
+    private final OrderWarehouseRepository orderWarehouseRepository;
 
-    @GrpcClient("bank")
-    private BankServiceGrpc.BankServiceFutureStub bankStub;
 
     @Autowired
-    public OrderService(OrderRepository orderRepository, GoodsRepository goodsRepository, CustomerRepository customerRepository, WarehouseService warehouseService) {
+    public OrderService(OrderRepository orderRepository, GoodsRepository goodsRepository, CustomerRepository customerRepository,  WarehouseGoodsRepository warehouseGoodsRepository, OrderWarehouseRepository orderWarehouseRepository) {
         this.orderRepository = orderRepository;
         this.goodsRepository = goodsRepository;
         this.customerRepository = customerRepository;
-        this.warehouseService = warehouseService;
+        this.warehouseGoodsRepository = warehouseGoodsRepository;
+        this.orderWarehouseRepository = orderWarehouseRepository;
     }
 
     @Transactional
-    public boolean createOrder(Long goodsId, Long customerId, int quantity) {
+    public OrderDTO createOrder(Long goodsId, Long customerId, int quantity) {
         // 查找商品和客户
         Optional<Goods> goodsOptional = goodsRepository.findById(goodsId);
         Optional<Customer> customerOptional = customerRepository.findById(customerId);
 
-        if (goodsOptional.isEmpty() || customerOptional.isEmpty()) {
-            return false;
+        if (goodsOptional.isEmpty()) {
+            throw new IllegalArgumentException("Invalid goods or customer ID.");
+        } else if (customerOptional.isEmpty()) {
+            throw new IllegalArgumentException("Invalid goods or customer ID.");
         }
 
         Goods goods = goodsOptional.get();
@@ -64,31 +53,45 @@ public class OrderService {
         order.setCustomer(customer);
         order.setTotalQuantity(quantity);
         order.setTotalPrice(totalPrice);
-        //TODO 查找合适的仓库 存到 OrderWarehouse
-
         // 保存订单到数据库
         order = orderRepository.save(order);
 
-        // 执行银行扣款操作
-        Future<PrepareResponse> bankResponseFuture = bankStub.prepare(PrepareRequest.newBuilder()
-                .setCusomerName(order.getCustomer().getName())
-                .setMoney(totalPrice)
-                .setAction(REDUCE_BALANCE)
-                .setTransactionId(order.getId())
-                .build());
+        int remainingQuantity = quantity;
+        List<WarehouseGoods> availableWarehouseGoods = warehouseGoodsRepository.findByGoodsId(goodsId);
 
-        PrepareResponse bankResponse;
-        try {
-            bankResponse = bankResponseFuture.get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e);
+        for (WarehouseGoods warehouseGoods : availableWarehouseGoods) {
+            if (remainingQuantity <= 0) break;
+
+            int availableQuantity = warehouseGoods.getQuantity();
+            int allocatedQuantity = Math.min(remainingQuantity, availableQuantity);
+
+            // 创建OrderWarehouse对象
+            OrderWarehouse orderWarehouse = new OrderWarehouse();
+            orderWarehouse.setOrder(order);
+            orderWarehouse.setWarehouseGoods(warehouseGoods);
+            orderWarehouse.setQuantity(allocatedQuantity);
+
+            // 保存OrderWarehouse到数据库
+            orderWarehouseRepository.save(orderWarehouse);
+
+            // 不更新仓库的商品数量
+//            warehouseGoods.setQuantity(availableQuantity - allocatedQuantity);
+//            warehouseGoodsRepository.save(warehouseGoods);
+
+            // 更新剩余数量
+            remainingQuantity -= allocatedQuantity;
         }
-        return bankResponse.getSuccess();
+
+        // 检查是否所有商品数量都已分配完
+        if (remainingQuantity > 0) {
+            throw new RuntimeException("库存不足，无法满足订单需求。");
+        }
+        return new OrderDTO(order,true);
     }
 
     //Refund order
     @Transactional
-    public boolean refundOrder(Long orderId) {
+    public boolean cancelOrder(Long orderId) {
         // 查找订单
         Optional<Order> orderOptional = orderRepository.findById(orderId);
 
@@ -97,26 +100,46 @@ public class OrderService {
         }
 
         Order order = orderOptional.get();
-        //TODO 查找合适的仓库 退货到 OrderWarehouse
-        double refundAmount = order.getTotalPrice();  // 获取订单的总金额
+        //查找合适的仓库 退货到 OrderWarehouse
+        List<OrderWarehouse> orderWarehouses = orderWarehouseRepository.findByOrder(order);
+        // 逐个恢复库存
+        for (OrderWarehouse orderWarehouse : orderWarehouses) {
+            int quantityToReturn = orderWarehouse.getQuantity();
 
-        // 调用银行服务进行退款操作
-        Future<PrepareResponse> bankResponseFuture = bankStub.prepare(PrepareRequest.newBuilder()
-                .setCusomerName(order.getCustomer().getName())
-                .setMoney(refundAmount)
-                .setAction(ADD_BALANCE)  // 退款操作
-                .setTransactionId(order.getId())
-                .build());
-
-        PrepareResponse bankResponse;
-        try {
-            // 等待银行的响应
-            bankResponse = bankResponseFuture.get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException("Error processing refund", e);
+            // 查找对应仓库的WarehouseGoods记录
+            WarehouseGoods warehouseGoods = orderWarehouse.getWarehouseGoods();
+            // 增加库存数量
+            warehouseGoods.setQuantity(warehouseGoods.getQuantity() + quantityToReturn);
+            warehouseGoodsRepository.save(warehouseGoods);
         }
-        return bankResponse.getSuccess();
+
+        // 删除订单的OrderWarehouse记录
+        orderWarehouseRepository.deleteAll(orderWarehouses);
+
+        // 删除订单
+        orderRepository.delete(order);
+        return true;
     }
 
+
+    public OrderDTO getOrderById(Long orderId) {
+        // Retrieve the Order entity by its ID using the repository
+        Optional<Order> orderOptional = orderRepository.findById(orderId);
+
+        // If the order is found, convert it to an OrderDTO and return it
+        if (orderOptional.isPresent()) {
+            Order order = orderOptional.get();
+            return new OrderDTO(order, true); // Assuming you want related entities included
+        }
+
+        // If the order is not found, throw an exception or handle it as needed
+        throw new RuntimeException("Order not found with ID: " + orderId);
+    }
+
+    //获取实体
+    public Order getOrderEntity(Long orderId) {
+        return orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found with ID: " + orderId));
+    }
 
 }

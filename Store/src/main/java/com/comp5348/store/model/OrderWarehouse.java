@@ -17,8 +17,8 @@ public class OrderWarehouse {
     private Order order;  // 关联的订单
 
     @ManyToOne
-    @JoinColumn(name = "warehouse_id", nullable = false)
-    private Warehouse warehouse;  // 发货的仓库
+    @JoinColumn(name = "warehousegoods_id", nullable = false)
+    private WarehouseGoods warehouseGoods;  // 发货的仓库
 
     @Column(nullable = false)
     private int quantity;  // 从该仓库发货的商品数量
