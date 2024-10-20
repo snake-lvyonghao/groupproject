@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -60,30 +61,28 @@ public class WarehouseGoodsService {
     }
 
     @Transactional
-    public WarehouseGoodsDTO adjustGoodsQuantity(Long warehouseId, Long goodsId, int quantity, boolean increase) {
-        Optional<WarehouseGoods> warehouseGoodsDTO = warehouseGoodsRepository.findByWarehouseIdAndGoodsId(warehouseId, goodsId);
-        WarehouseGoods warehouseGoods;
-        if (warehouseGoodsDTO.isEmpty()) {
-            throw new RuntimeException("Warehouse or Goods not found.");
-        }
-        warehouseGoods = warehouseGoodsDTO.get();
-        if (increase) {
-            warehouseGoods.setQuantity(warehouseGoods.getQuantity() - quantity);
-        } else {
-            int newQuantity = warehouseGoods.getQuantity() + quantity;
-            if (newQuantity < 0) {
-                throw new RuntimeException("Insufficient stock.");
-            }
-            warehouseGoods.setQuantity(newQuantity);
+    public boolean adjustGoodsQuantity(WarehouseGoods warehouseGoods, int quantity, boolean increase) {
+        // 如果是增加库存，直接增加数量，否则减少数量
+        int newQuantity = increase ? warehouseGoods.getQuantity() + quantity : warehouseGoods.getQuantity() - quantity;
+
+        // 检查库存是否不足
+        if (newQuantity < 0) {
+            return false;
         }
 
-        // Save the updated or new WarehouseGoods entity
-        WarehouseGoods savedWarehouseGoods = warehouseGoodsRepository.save(warehouseGoods);
-        return new WarehouseGoodsDTO(savedWarehouseGoods);
-
+        // 更新库存数量
+        warehouseGoods.setQuantity(newQuantity);
+        warehouseGoodsRepository.save(warehouseGoods);
+        return true;
     }
+
+
 
     public void deleteWarehouseGoods(Long warehouseGoodsId) {
         warehouseGoodsRepository.deleteById(warehouseGoodsId);
+    }
+
+    public List<WarehouseGoods> findByGoodsId(Long goodsId) {
+        return warehouseGoodsRepository.findByGoodsId(goodsId);
     }
 }

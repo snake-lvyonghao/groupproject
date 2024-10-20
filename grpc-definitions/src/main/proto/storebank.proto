@@ -6,17 +6,12 @@ option java_outer_classname = "StoreBankProto";
 
 
 // Prepare request and response messages
+// Prepare 请求消息
 message PrepareRequest {
-  enum Action {
-    ACTION_UNSPECIFIED = 0;
-    ADD_BALANCE = 1;
-    REDUCE_BALANCE = 2;
-  }
-
-  string cusomerName = 1;
-  double money = 2;
-  Action action = 3;
-  int64 transactionId = 4;
+  string fromAccount = 1;    // 扣款的账户ID
+  string toAccount = 2;      // 收款的账户ID
+  double amount = 3;         // 交易金额
+  int64 transactionId = 4;   // 事务 ID，用于唯一标识此事务
 }
 
 message PrepareResponse {

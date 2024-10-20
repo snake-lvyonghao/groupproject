@@ -9,10 +9,6 @@ import com.comp5348.grpc.*;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
 
-
-import static com.comp5348.grpc.PrepareRequest.Action.ADD_BALANCE;
-import static com.comp5348.grpc.PrepareRequest.Action.REDUCE_BALANCE;
-
 @GrpcService
 public class BankService extends BankServiceGrpc.BankServiceImplBase {
 
@@ -26,59 +22,58 @@ public class BankService extends BankServiceGrpc.BankServiceImplBase {
 
     @Override
     public void prepare(PrepareRequest request, StreamObserver<PrepareResponse> responseObserver) {
-        TransactionRecord transactionRecord = new TransactionRecord();
+        // 获取from账户和to账户
+        Account fromAccount = accountRepository.findByAccountOwner(request.getFromAccount());
+        Account toAccount = accountRepository.findByAccountOwner(request.getToAccount());
 
-        //根据请求查找账户
-        Account account = accountRepository.findByAccountOwner(request.getCusomerName());
-        if (account == null) {
-            transactionRecord.setStatus(TransactionStatus.FAILURE);
-            transactionRecord.setAccountId(account.getAccountId());
-            transactionRecordRepository.save(transactionRecord);
-
+        if (fromAccount == null || toAccount == null) {
+            // 如果任一账户不存在，返回失败
             responseObserver.onNext(PrepareResponse.newBuilder().setSuccess(false).build());
             responseObserver.onCompleted();
             return;
         }
 
-        transactionRecord.setAccountId(account.getAccountId());
-        transactionRecord.setAmount(request.getMoney());
-        if (request.getAction() == REDUCE_BALANCE) {
-            transactionRecord.setAmount(-request.getMoney());
-        } else if (request.getAction() == ADD_BALANCE) {
-            transactionRecord.setAmount(request.getMoney());
-        }
+        // 准备事务记录
+        TransactionRecord transactionRecord = new TransactionRecord();
+        transactionRecord.setFromAccount(fromAccount.getAccountOwner());
+        transactionRecord.setToAccount(toAccount.getAccountOwner());
+        transactionRecord.setAmount(request.getAmount());
         transactionRecord.setStatus(TransactionStatus.PENDING);
+        transactionRecord.setId(request.getTransactionId());
 
-        if (request.getAction() == REDUCE_BALANCE && account.getBalance() >= request.getMoney()) {
-            transactionRecord.setStatus(TransactionStatus.PENDING);
-        } else if (request.getAction() == ADD_BALANCE) {
-            transactionRecord.setStatus(TransactionStatus.PENDING);
-        } else {
-            transactionRecord.setStatus(TransactionStatus.FAILURE);
-        }
+        // 检查from账户的余额是否足够
+        if (fromAccount.getBalance() >= request.getAmount()) {
+            // 将from账户的余额锁定（相当于冻结该金额，等待commit）
+            fromAccount.setBalance(fromAccount.getBalance() - request.getAmount());
+            transactionRecordRepository.save(transactionRecord);
+            accountRepository.save(fromAccount);
 
-        transactionRecordRepository.save(transactionRecord);
-        if (transactionRecord.getStatus() == TransactionStatus.PENDING) {
             responseObserver.onNext(PrepareResponse.newBuilder().setSuccess(true).build());
-            responseObserver.onCompleted();
-            return;
+        } else {
+            // 余额不足，设置事务状态为失败
+            transactionRecord.setStatus(TransactionStatus.FAILURE);
+            transactionRecordRepository.save(transactionRecord);
+
+            responseObserver.onNext(PrepareResponse.newBuilder().setSuccess(false).build());
         }
 
-        responseObserver.onNext(PrepareResponse.newBuilder().setSuccess(false).build());
         responseObserver.onCompleted();
     }
 
     @Override
     public void commit(CommitRequest request, StreamObserver<CommitResponse> responseObserver) {
         TransactionRecord transactionRecord = transactionRecordRepository.findByTransactionId(request.getTransactionId()).orElse(null);
-        if (transactionRecord == null) {
+        if (transactionRecord == null || transactionRecord.getStatus() != TransactionStatus.PENDING) {
             responseObserver.onNext(CommitResponse.newBuilder().setSuccess(false).build());
             responseObserver.onCompleted();
             return;
         }
 
-        Account acc = accountRepository.findById(transactionRecord.getAccountId()).orElse(null);
-        if (acc == null) {
+        // 获取from账户和to账户
+        Account fromAccount = accountRepository.findByAccountOwner(transactionRecord.getFromAccount());
+        Account toAccount = accountRepository.findByAccountOwner(transactionRecord.getToAccount());
+
+        if (fromAccount == null || toAccount == null) {
             transactionRecord.setStatus(TransactionStatus.FAILURE);
             transactionRecordRepository.save(transactionRecord);
 
@@ -87,10 +82,13 @@ public class BankService extends BankServiceGrpc.BankServiceImplBase {
             return;
         }
 
-        acc.setBalance(acc.getBalance() + transactionRecord.getAmount());
+        // 将to账户的余额增加
+        toAccount.setBalance(toAccount.getBalance() + transactionRecord.getAmount());
         transactionRecord.setStatus(TransactionStatus.SUCCESS);
+
+        // 保存更新
         transactionRecordRepository.save(transactionRecord);
-        accountRepository.save(acc);
+        accountRepository.save(toAccount);
 
         responseObserver.onNext(CommitResponse.newBuilder().setSuccess(true).build());
         responseObserver.onCompleted();
@@ -105,33 +103,56 @@ public class BankService extends BankServiceGrpc.BankServiceImplBase {
             return;
         }
 
-        Account acc = accountRepository.findById(transactionRecord.getAccountId()).orElse(null);
-        if (acc == null) {
+        // 获取from账户和to账户
+        Account fromAccount = accountRepository.findByAccountOwner(transactionRecord.getFromAccount());
+        Account toAccount = accountRepository.findByAccountOwner(transactionRecord.getToAccount());
+
+        // 如果账户不存在，无法进行回滚
+        if (fromAccount == null || toAccount == null) {
             responseObserver.onNext(RollbackResponse.newBuilder().setSuccess(false).build());
             responseObserver.onCompleted();
             return;
         }
 
-        if (transactionRecord.getStatus() == TransactionStatus.FAILURE) {
-            responseObserver.onNext(RollbackResponse.newBuilder().setSuccess(true).build());
-            responseObserver.onCompleted();
-            return;
-        } else if (transactionRecord.getStatus() == TransactionStatus.PENDING) {
-            transactionRecord.setStatus(TransactionStatus.FAILURE);
-            transactionRecordRepository.save(transactionRecord);
-            responseObserver.onNext(RollbackResponse.newBuilder().setSuccess(true).build());
-            responseObserver.onCompleted();
-            return;
-        } else if (transactionRecord.getStatus() == TransactionStatus.SUCCESS) {
-            transactionRecord.setStatus(TransactionStatus.FAILURE);
-            transactionRecordRepository.save(transactionRecord);
-            acc.setBalance(acc.getBalance() - transactionRecord.getAmount());
-            accountRepository.save(acc);
-            responseObserver.onNext(RollbackResponse.newBuilder().setSuccess(true).build());
-            responseObserver.onCompleted();
-            return;
+        // 根据不同的事务状态进行处理
+        switch (transactionRecord.getStatus()) {
+            case PENDING:
+                // 如果事务仍处于PENDING状态，意味着扣款未正式提交，可以直接取消
+                fromAccount.setBalance(fromAccount.getBalance() + transactionRecord.getAmount());
+                transactionRecord.setStatus(TransactionStatus.CANCELLED);
+
+                // 保存更新
+                accountRepository.save(fromAccount);
+                transactionRecordRepository.save(transactionRecord);
+
+                responseObserver.onNext(RollbackResponse.newBuilder().setSuccess(true).build());
+                break;
+
+            case SUCCESS:
+                // 如果事务已成功，需要撤销对两个账户的变动
+                fromAccount.setBalance(fromAccount.getBalance() + transactionRecord.getAmount());
+                toAccount.setBalance(toAccount.getBalance() - transactionRecord.getAmount());
+                transactionRecord.setStatus(TransactionStatus.ROLLED_BACK);
+
+                // 保存更新
+                accountRepository.save(fromAccount);
+                accountRepository.save(toAccount);
+                transactionRecordRepository.save(transactionRecord);
+
+                responseObserver.onNext(RollbackResponse.newBuilder().setSuccess(true).build());
+                break;
+
+            case FAILURE:
+                // 如果事务已经标记为失败，直接返回成功，因为失败的事务不需要进行任何操作
+                responseObserver.onNext(RollbackResponse.newBuilder().setSuccess(true).build());
+                break;
+
+            default:
+                // 其他未知状态，回滚失败
+                responseObserver.onNext(RollbackResponse.newBuilder().setSuccess(false).build());
+                break;
         }
-        responseObserver.onNext(RollbackResponse.newBuilder().setSuccess(false).build());
+
         responseObserver.onCompleted();
     }
 }

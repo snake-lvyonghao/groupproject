@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class OrderService {
@@ -16,17 +17,19 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final GoodsRepository goodsRepository;
     private final CustomerRepository customerRepository;
-    private final WarehouseGoodsRepository warehouseGoodsRepository;
+    private final WarehouseGoodsService warehouseGoodsService;
     private final OrderWarehouseRepository orderWarehouseRepository;
+    private final BankService bankService;
 
 
     @Autowired
-    public OrderService(OrderRepository orderRepository, GoodsRepository goodsRepository, CustomerRepository customerRepository,  WarehouseGoodsRepository warehouseGoodsRepository, OrderWarehouseRepository orderWarehouseRepository) {
+    public OrderService(OrderRepository orderRepository, GoodsRepository goodsRepository, CustomerRepository customerRepository, WarehouseGoodsService warehouseGoodsService, OrderWarehouseRepository orderWarehouseRepository, BankService bankService) {
         this.orderRepository = orderRepository;
         this.goodsRepository = goodsRepository;
         this.customerRepository = customerRepository;
-        this.warehouseGoodsRepository = warehouseGoodsRepository;
+        this.warehouseGoodsService = warehouseGoodsService;
         this.orderWarehouseRepository = orderWarehouseRepository;
+        this.bankService = bankService;
     }
 
     @Transactional
@@ -57,7 +60,7 @@ public class OrderService {
         order = orderRepository.save(order);
 
         int remainingQuantity = quantity;
-        List<WarehouseGoods> availableWarehouseGoods = warehouseGoodsRepository.findByGoodsId(goodsId);
+        List<WarehouseGoods> availableWarehouseGoods = warehouseGoodsService.findByGoodsId(goodsId);
 
         for (WarehouseGoods warehouseGoods : availableWarehouseGoods) {
             if (remainingQuantity <= 0) break;
@@ -73,19 +76,34 @@ public class OrderService {
 
             // 保存OrderWarehouse到数据库
             orderWarehouseRepository.save(orderWarehouse);
-
-            // 不更新仓库的商品数量
-//            warehouseGoods.setQuantity(availableQuantity - allocatedQuantity);
-//            warehouseGoodsRepository.save(warehouseGoods);
-
+            
             // 更新剩余数量
             remainingQuantity -= allocatedQuantity;
         }
 
         // 检查是否所有商品数量都已分配完
         if (remainingQuantity > 0) {
-            throw new RuntimeException("库存不足，无法满足订单需求。");
+            throw new RuntimeException("The inventory is insufficient to meet the order demand.");
         }
+
+        //Grpc process payment
+        OrderDTO orderDTO = new OrderDTO(order,true);
+        boolean paymentSuccess = bankService.processTransaction(orderDTO,false);
+        if (!paymentSuccess) {
+            throw new RuntimeException("Payment failed");
+        }
+
+        // 更新仓库的商品数量
+        orderWarehouseRepository.findByOrder(order)
+                .forEach(orderWarehouse ->
+                        warehouseGoodsService.adjustGoodsQuantity(
+                                orderWarehouse.getWarehouseGoods(),
+                                orderWarehouse.getQuantity(),
+                                true
+                        )
+                );
+
+
         return new OrderDTO(order,true);
     }
 
@@ -100,21 +118,24 @@ public class OrderService {
         }
 
         Order order = orderOptional.get();
-        //查找合适的仓库 退货到 OrderWarehouse
-        List<OrderWarehouse> orderWarehouses = orderWarehouseRepository.findByOrder(order);
-        // 逐个恢复库存
-        for (OrderWarehouse orderWarehouse : orderWarehouses) {
-            int quantityToReturn = orderWarehouse.getQuantity();
-
-            // 查找对应仓库的WarehouseGoods记录
-            WarehouseGoods warehouseGoods = orderWarehouse.getWarehouseGoods();
-            // 增加库存数量
-            warehouseGoods.setQuantity(warehouseGoods.getQuantity() + quantityToReturn);
-            warehouseGoodsRepository.save(warehouseGoods);
+        OrderDTO orderDTO = new OrderDTO(order,true);
+        boolean paymentSuccess = bankService.processTransaction(orderDTO,false);
+        if (!paymentSuccess) {
+            throw new RuntimeException("Payment failed");
         }
-
-        // 删除订单的OrderWarehouse记录
-        orderWarehouseRepository.deleteAll(orderWarehouses);
+        //TODO Email notify customer
+        //退货到 OrderWarehouse
+        orderWarehouseRepository.findByOrder(order)
+                .forEach(orderWarehouse -> {
+                    // 调整库存，退回商品数量
+                    warehouseGoodsService.adjustGoodsQuantity(
+                            orderWarehouse.getWarehouseGoods(),
+                            orderWarehouse.getQuantity(),
+                            true
+                    );
+                    // 删除 OrderWarehouse 记录
+                    orderWarehouseRepository.delete(orderWarehouse);
+                });
 
         // 删除订单
         orderRepository.delete(order);
@@ -140,6 +161,25 @@ public class OrderService {
     public Order getOrderEntity(Long orderId) {
         return orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found with ID: " + orderId));
+    }
+
+    @Transactional
+    public List<OrderDTO> getOrdersByCustomerId(Long customerId) {
+        // 查找客户
+        Optional<Customer> customerOptional = customerRepository.findById(customerId);
+        if (customerOptional.isEmpty()) {
+            throw new RuntimeException("Customer not found with ID: " + customerId);
+        }
+
+        Customer customer = customerOptional.get();
+
+        // 查找该客户的所有订单
+        List<Order> orders = orderRepository.findByCustomer(customer);
+
+        // 将订单实体转换为 DTO 并返回
+        return orders.stream()
+                .map(order -> new OrderDTO(order, true)) // true 表示包含关联的实体
+                .collect(Collectors.toList());
     }
 
 }

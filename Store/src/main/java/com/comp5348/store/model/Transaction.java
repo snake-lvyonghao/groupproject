@@ -1,20 +1,21 @@
-package com.comp5348.bank.model;
+package com.comp5348.store.model;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter @Setter
 @Entity
-@NoArgsConstructor
-public class TransactionRecord {
+public class Transaction {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String fromAccount;
     private String toAccount;
     private double amount;
+
     private TransactionStatus status;
 }
-

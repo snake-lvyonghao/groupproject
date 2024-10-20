@@ -10,14 +10,17 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class TransactionRecordDTO {
-    private Long transactionId;  // 交易的唯一标识符
-    private Long accountId;  // 相关联的账户ID
-    private double amount;  // 交易的金额
-    private TransactionStatus status;  // 交易的状态
+    private Long id;
+    private String fromAccount;
+    private String toAccount;
+    private double amount;
+    private TransactionStatus status;
 
+    // 从实体类构建DTO
     public TransactionRecordDTO(TransactionRecord transactionRecord) {
-        this.transactionId = transactionRecord.getTransactionId();
-        this.accountId = transactionRecord.getAccountId();
+        this.id = transactionRecord.getId();
+        this.fromAccount = transactionRecord.getFromAccount();
+        this.toAccount = transactionRecord.getToAccount();
         this.amount = transactionRecord.getAmount();
         this.status = transactionRecord.getStatus();
     }
