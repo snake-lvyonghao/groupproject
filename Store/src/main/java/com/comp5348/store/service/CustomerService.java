@@ -19,10 +19,11 @@ public class CustomerService {
     }
 
     // 注册新用户，保存到数据库中
-    public CustomerDTO registerCustomer(String name, String rawPassword) {
+    public CustomerDTO registerCustomer(String name, String rawPassword,String email) {
         Customer customer = new Customer();
         customer.setName(name);
         customer.encryptAndSetPassword(rawPassword); // 使用加密密码
+        customer.setEmail(email);
         Customer saveCustomer = customerRepository.save(customer);  // 保存用户到数据库
         return new CustomerDTO(saveCustomer);
     }

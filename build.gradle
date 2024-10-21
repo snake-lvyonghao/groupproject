@@ -77,24 +77,24 @@ subprojects {
 }
 project(":Store") {
 	dependencies {
-		implementation project(":grpc-definitions")
+		implementation project(":Common")
 	}
 }
 
 project(":Bank") {
 	dependencies {
-		implementation project(":grpc-definitions")
+		implementation project(":Common")
 	}
 }
 
 project(":DeliveryCo") {
 	dependencies {
-		implementation project(":grpc-definitions")
+		implementation project(":Common")
 	}
 }
 
 project(":EmailService") {
 	dependencies {
-		implementation project(":grpc-definitions")
+		implementation project(":Common")
 	}
 }

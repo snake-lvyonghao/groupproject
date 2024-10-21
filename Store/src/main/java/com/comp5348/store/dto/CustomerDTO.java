@@ -15,11 +15,13 @@ public class CustomerDTO {
     private Long id;
     private String name;
     private String password;
+    private String email;
 
     public CustomerDTO(Customer customerEntity){
         this.id = customerEntity.getId();
         this.name = customerEntity.getName();
         this.password = customerEntity.getPassword();
+        this.email = customerEntity.getEmail();
     }
 
 }

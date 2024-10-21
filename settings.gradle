@@ -1,4 +1,5 @@
 rootProject.name = 'Groupproject'
 include 'Bank', 'DeliveryCo', 'EmailService', 'Store'
-include 'grpc-definitions'
+include 'Common'
+
 
