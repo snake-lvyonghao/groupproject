@@ -29,7 +29,7 @@ public class DeliveryService {
 
         ObjectMapper mapper = new ObjectMapper();
         // JavaTimeModule is registered to handle the serialization of LocalDateTime.
-        mapper.registerModule(new JavaTimeModule());
+
         // 将 OrderDTO 的信息转换为 WarehouseInfo 列表
         List<DeliveryRequestDTO.WarehouseInfo> warehouseInfos = orderDTO.getOrderWarehouses().stream()
                 .map(orderWarehouseDTO -> new DeliveryRequestDTO.WarehouseInfo(
