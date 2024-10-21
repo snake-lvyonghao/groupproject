@@ -77,7 +77,7 @@ public class WarehouseGoodsService {
     }
 
 
-
+    @Transactional
     public void deleteWarehouseGoods(Long warehouseGoodsId) {
         warehouseGoodsRepository.deleteById(warehouseGoodsId);
     }

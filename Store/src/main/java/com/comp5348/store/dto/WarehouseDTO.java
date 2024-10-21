@@ -13,6 +13,7 @@ import lombok.Setter;
 public class WarehouseDTO {
     private long id;
     private String name;
+    private String location;
 
     /**
      * Constructs a WarehouseDTO from a Warehouse entity.
@@ -26,5 +27,6 @@ public class WarehouseDTO {
     public WarehouseDTO(Warehouse warehouse, boolean b) {
         this.id = warehouse.getId();
         this.name = warehouse.getName();
+        this.location = warehouse.getLocation();
     }
 }

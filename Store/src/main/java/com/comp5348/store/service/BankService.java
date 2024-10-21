@@ -9,10 +9,10 @@ import com.comp5348.grpc.RollbackRequest;
 import com.comp5348.grpc.RollbackResponse;
 import com.comp5348.store.dto.OrderDTO;
 import com.comp5348.store.model.Transaction;
-import com.comp5348.store.model.TransactionStatus;
 import com.comp5348.store.repository.TransactionRepository;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -31,7 +31,7 @@ public class BankService {
         this.transactionRepository = transactionRepository;
     }
 
-
+    @Transactional
     public boolean processTransaction(OrderDTO order, boolean isRefund) {
         // 设置转账的方向
         String fromAccount = isRefund ? "Store" : order.getCustomer().getName();
@@ -75,8 +75,8 @@ public class BankService {
         }
     }
 
-
-    private boolean commitTransaction(Long transactionId) {
+    @Transactional
+    protected boolean commitTransaction(Long transactionId) {
         // 执行commit操作
         Future<CommitResponse> commitResponseFuture = bankStub.commit(CommitRequest.newBuilder()
                 .setTransactionId(transactionId)
@@ -103,7 +103,8 @@ public class BankService {
         }
     }
 
-    private void rollbackTransaction(Long transactionId) {
+    @Transactional
+    protected void rollbackTransaction(Long transactionId) {
         // 执行rollback操作
         Future<RollbackResponse> rollbackResponseFuture = bankStub.rollback(RollbackRequest.newBuilder()
                 .setTransactionId(transactionId)

@@ -23,8 +23,8 @@ public class CustomerService {
         Customer customer = new Customer();
         customer.setName(name);
         customer.encryptAndSetPassword(rawPassword); // 使用加密密码
-        Customer saveVustomer = customerRepository.save(customer);  // 保存用户到数据库
-        return new CustomerDTO(saveVustomer);
+        Customer saveCustomer = customerRepository.save(customer);  // 保存用户到数据库
+        return new CustomerDTO(saveCustomer);
     }
 
     // 根据 ID 查找用户

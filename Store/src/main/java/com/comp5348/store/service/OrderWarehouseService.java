@@ -9,6 +9,7 @@ import com.comp5348.store.repository.OrderWarehouseRepository;
 import com.comp5348.store.repository.WarehouseGoodsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -31,7 +32,7 @@ public class OrderWarehouseService {
                 .map(orderWarehouse -> new OrderWarehouseDTO((OrderWarehouse) orderWarehouse, true))
                 .collect(Collectors.toList());
     }
-
+    @Transactional
     public OrderWarehouseDTO creatOrderWarehouse(Long orderId,Long warehouseGoodsId,int quantity){
         OrderWarehouse orderWarehouse = new OrderWarehouse();
         Order order = orderRepository.findById(orderId)

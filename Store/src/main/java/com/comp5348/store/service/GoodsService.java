@@ -33,7 +33,7 @@ public class GoodsService {
         Optional<Goods> goods = goodsRepository.findById(id);
         return goods.map(GoodsDTO::new).orElse(null);
     }
-
+    @Transactional
     public void deleteGoodsById(long id) {
         goodsRepository.deleteById(id);
     }
