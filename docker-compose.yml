@@ -1,0 +1,22 @@
+services:
+  seata-server:
+    image: seataio/seata-server:1.8.0.1
+    hostname: seata-server
+    ports:
+      - "8091:8091"
+      - "7091:7091"
+    environment:
+      - SEATA_PORT=8091
+      - STORE_MODE=file
+    volumes:
+      - ./seata-config:/seata-server/resources # 挂载外部配置，便于调整 Seata 配置
+
+  rabbitmq:
+    container_name: 'rabbitmq'
+    image: 'rabbitmq:3.13-management'
+    environment:
+      - 'RABBITMQ_DEFAULT_PASS=admin'
+      - 'RABBITMQ_DEFAULT_USER=admin'
+    ports:
+      - '5672:5672'
+      - '15672:15672'
