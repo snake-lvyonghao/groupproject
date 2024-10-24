@@ -10,7 +10,7 @@ import lombok.Setter;
 public class OrderWarehouse {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private long id;
 
     @ManyToOne
     @JoinColumn(name = "order_id", nullable = false)

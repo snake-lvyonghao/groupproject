@@ -1,13 +1,18 @@
+version: '3.8'
+
 services:
   seata-server:
     image: seataio/seata-server:1.8.0.1
     hostname: seata-server
     ports:
-      - "8091:8091"
-      - "7091:7091"
+      - "8091:8091"  # Seata Server 主端口
+      - "7091:7091"  # Seata 控制台端口
     environment:
       - SEATA_PORT=8091
       - STORE_MODE=file
+      - TZ=Australia/Sydney  # 设置容器的时区，确保与主机时区一致
+    volumes:
+      - ./seata-config:/root/seata-config
 
 
   rabbitmq:
@@ -16,6 +21,8 @@ services:
     environment:
       - 'RABBITMQ_DEFAULT_PASS=admin'
       - 'RABBITMQ_DEFAULT_USER=admin'
+      - TZ=Australia/Sydney  # 设置容器的时区，确保与主机时区一致
     ports:
-      - '5672:5672'
-      - '15672:15672'
+      - '5672:5672'      # RabbitMQ 服务端口
+      - '15672:15672'    # RabbitMQ 管理控制台端口
+

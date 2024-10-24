@@ -1,14 +1,19 @@
 package com.comp5348.store.service;
 
 
+import com.comp5348.store.controller.OrderController;
 import com.comp5348.store.dto.OrderDTO;
 import com.comp5348.store.model.*;
 import com.comp5348.store.repository.*;
 import io.seata.rm.tcc.api.BusinessActionContext;
 import io.seata.spring.annotation.GlobalTransactional;
 import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -21,7 +26,7 @@ public class OrderService {
     private final CustomerRepository customerRepository;
     private final WarehouseGoodsService warehouseGoodsService;
     private final BankService bankService;
-
+    private static final Logger log = LoggerFactory.getLogger(OrderController.class);
 
     @Autowired
     public OrderService(OrderRepository orderRepository, GoodsRepository goodsRepository, CustomerRepository customerRepository, WarehouseGoodsService warehouseGoodsService, BankService bankService) {
@@ -32,7 +37,6 @@ public class OrderService {
         this.bankService = bankService;
     }
 
-    @Transactional
     @GlobalTransactional
     public OrderDTO createOrder(Long goodsId, Long customerId, int quantity) {
         // 查找商品和客户
@@ -77,6 +81,8 @@ public class OrderService {
         //TODO 通知DeliveryCO取货
         return new OrderDTO(order,true);
     }
+
+
 
     //Refund order
     @Transactional

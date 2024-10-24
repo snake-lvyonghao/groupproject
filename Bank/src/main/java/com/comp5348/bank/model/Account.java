@@ -10,7 +10,7 @@ import lombok.Setter;
 public class Account {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long accountId;  // 用户的账户ID
+    private long accountId;  // 用户的账户ID
 
     @Column(nullable = false)
     private double balance;  // 账户余额

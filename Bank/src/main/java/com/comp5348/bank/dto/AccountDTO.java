@@ -9,7 +9,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class AccountDTO {
-    private Long accountId;  // 用户的账户ID
+    private long accountId;  // 用户的账户ID
     private double balance;  // 账户余额
     private String accountOwner; // 账户拥有者
 

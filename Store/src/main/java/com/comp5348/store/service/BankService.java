@@ -13,6 +13,7 @@ import com.comp5348.store.repository.TransactionRepository;
 import io.seata.rm.tcc.api.BusinessActionContext;
 import io.seata.rm.tcc.api.LocalTCC;
 import io.seata.rm.tcc.api.TwoPhaseBusinessAction;
+import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,8 +23,10 @@ import java.util.concurrent.Future;
 
 import static com.comp5348.store.model.TransactionStatus.*;
 
-@LocalTCC
+
 @Service
+@Slf4j
+@LocalTCC
 public class BankService {
 
     @GrpcClient("bankService")
@@ -36,7 +39,6 @@ public class BankService {
     }
 
     @TwoPhaseBusinessAction(name = "prepareBankTransaction", commitMethod = "commitTransaction", rollbackMethod = "rollbackTransaction")
-    @Transactional
     public boolean prepareTransaction(BusinessActionContext context, OrderDTO order, boolean isRefund) {
         String fromAccount = isRefund ? "Store" : order.getCustomer().getName();
         String toAccount = isRefund ? order.getCustomer().getName() : "Store";
@@ -51,7 +53,7 @@ public class BankService {
 
         // 把事务 ID 保存到上下文中以便于 commit 和 rollback 阶段使用
         context.addActionContext("transactionId", transaction.getId());
-
+        log.info(transaction.getFromAccount() +  " " +transaction.getToAccount() + " " + transaction.getAmount());
         // 执行银行扣款操作
         Future<PrepareResponse> bankResponseFuture = bankStub.prepare(PrepareRequest.newBuilder()
                 .setFromAccount(fromAccount)
@@ -79,9 +81,8 @@ public class BankService {
         }
     }
 
-    @Transactional
     public boolean commitTransaction(BusinessActionContext context) {
-        Long transactionId = (Long) context.getActionContext("transactionId");
+        Integer transactionId = (Integer) context.getActionContext("transactionId");
 
         // 执行 commit 操作
         Future<CommitResponse> commitResponseFuture = bankStub.commit(CommitRequest.newBuilder()
@@ -92,7 +93,7 @@ public class BankService {
             CommitResponse commitResponse = commitResponseFuture.get();
             if (commitResponse.getSuccess()) {
                 // 如果 commit 成功，更新事务状态为 SUCCESS
-                Transaction transaction = transactionRepository.findById(transactionId).orElse(null);
+                Transaction transaction = transactionRepository.findById(Long.valueOf(transactionId)).orElse(null);
                 if (transaction != null) {
                     transaction.setStatus(SUCCESS);
                     transactionRepository.save(transaction);
@@ -109,9 +110,9 @@ public class BankService {
         }
     }
 
-    @Transactional
+
     public void rollbackTransaction(BusinessActionContext context) {
-        Long transactionId = (Long) context.getActionContext("transactionId");
+        Integer transactionId = (Integer) context.getActionContext("transactionId");
 
         // 执行 rollback 操作
         Future<RollbackResponse> rollbackResponseFuture = bankStub.rollback(RollbackRequest.newBuilder()
@@ -122,7 +123,7 @@ public class BankService {
             RollbackResponse rollbackResponse = rollbackResponseFuture.get();
             if (rollbackResponse.getSuccess()) {
                 // 更新事务状态为 FAILED
-                Transaction transaction = transactionRepository.findById(transactionId).orElse(null);
+                Transaction transaction = transactionRepository.findById(Long.valueOf(transactionId)).orElse(null);
                 if (transaction != null) {
                     transaction.setStatus(FAILED);
                     transactionRepository.save(transaction);

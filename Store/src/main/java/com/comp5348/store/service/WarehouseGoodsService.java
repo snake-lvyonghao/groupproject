@@ -5,7 +5,9 @@ import com.comp5348.store.dto.WarehouseGoodsDTO;
 import com.comp5348.store.model.*;
 import com.comp5348.store.repository.*;
 import io.seata.rm.tcc.api.BusinessActionContext;
+import io.seata.rm.tcc.api.LocalTCC;
 import io.seata.rm.tcc.api.TwoPhaseBusinessAction;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +16,8 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
+@Slf4j
+@LocalTCC
 public class WarehouseGoodsService {
 
     private final WarehouseGoodsRepository warehouseGoodsRepository;
@@ -63,55 +67,56 @@ public class WarehouseGoodsService {
         }
     }
 
-    @Transactional
+
     @TwoPhaseBusinessAction(name = "freezeStockAction", commitMethod = "confirmFreezeStock", rollbackMethod = "cancelFreezeStock")
-    public boolean tryFreezeStock(BusinessActionContext context, Long goodsId, int remainingQuantity, Order order){
+    public boolean tryFreezeStock(BusinessActionContext context, Long goodsId, int remainingQuantity, Order order) {
         List<WarehouseGoods> availableWarehouseGoods = findByGoodsId(goodsId);
-        // 把事务 ID 保存到上下文中以便于 commit 和 rollback 阶段使用
         context.addActionContext("orderId", order.getId());
+
         for (WarehouseGoods warehouseGoods : availableWarehouseGoods) {
             if (remainingQuantity <= 0) break;
-
+            if (warehouseGoods == null || warehouseGoods.getWarehouse() == null) {
+                log.error("WarehouseGoods or its warehouse is null. Goods ID: {}", goodsId);
+                return false;
+            }
             int availableQuantity = warehouseGoods.getQuantity();
             int allocatedQuantity = Math.min(remainingQuantity, availableQuantity);
-
-            // 创建OrderWarehouse对象
+            log.info("Allocated {} items of goods {} from warehouse {}", allocatedQuantity, goodsId, warehouseGoods.getWarehouse().getId());
+            // 创建 OrderWarehouse 对象
             OrderWarehouse orderWarehouse = new OrderWarehouse();
             orderWarehouse.setOrder(order);
             orderWarehouse.setWarehouseGoods(warehouseGoods);
             orderWarehouse.setQuantity(allocatedQuantity);
 
-            // 保存OrderWarehouse到数据库
+            // 保存 OrderWarehouse 到数据库
             orderWarehouseRepository.save(orderWarehouse);
+
+            // 更新 WarehouseGoods 的数量
+            adjustGoodsQuantity(warehouseGoods, allocatedQuantity, false);
 
             // 更新剩余数量
             remainingQuantity -= allocatedQuantity;
+
+
         }
+
         // 检查是否所有商品数量都已分配完
         if (remainingQuantity > 0) {
-            return false; // 库存不足，返回 false 表示冻结失败
+            log.warn("Insufficient stock for goods {}", goodsId);
+            return false;
         }
-        // 更新仓库的商品数量
-        orderWarehouseRepository.findByOrder(order)
-                .forEach(orderWarehouse ->
-                        adjustGoodsQuantity(
-                                orderWarehouse.getWarehouseGoods(),
-                                orderWarehouse.getQuantity(),
-                                false
-                        )
-                );
-        // 检查是否所有商品数量都已分配完
+
         return true;
     }
-    @Transactional
+
     public boolean confirmFreezeStock(BusinessActionContext context) {
         // 在 confirm 阶段，这里不需要额外操作，只需返回 true 即可
         return true;
     }
-    @Transactional
+
     public boolean cancelFreezeStock(BusinessActionContext context) {
-        Long orderId = (Long) context.getActionContext("orderId");
-        Order order = orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
+        Integer orderId = (Integer) context.getActionContext("orderId");
+        Order order = orderRepository.findById(Long.valueOf(orderId)).orElseThrow(() -> new RuntimeException("Order not found"));
 
         //退货到 OrderWarehouse
         orderWarehouseRepository.findByOrder(order)
@@ -128,7 +133,7 @@ public class WarehouseGoodsService {
         return true;
     }
 
-    @Transactional
+
     public boolean adjustGoodsQuantity(WarehouseGoods warehouseGoods, int quantity, boolean increase) {
         // 如果是增加库存，直接增加数量，否则减少数量
         int newQuantity = increase ? warehouseGoods.getQuantity() + quantity : warehouseGoods.getQuantity() - quantity;

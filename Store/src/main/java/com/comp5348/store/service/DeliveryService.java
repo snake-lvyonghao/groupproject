@@ -31,15 +31,15 @@ public class DeliveryService {
         // JavaTimeModule is registered to handle the serialization of LocalDateTime.
 
         // 将 OrderDTO 的信息转换为 WarehouseInfo 列表
-        List<DeliveryRequestDTO.WarehouseInfo> warehouseInfos = orderDTO.getOrderWarehouses().stream()
-                .map(orderWarehouseDTO -> new DeliveryRequestDTO.WarehouseInfo(
-                        orderWarehouseDTO.getWarehouseGoodsDTO().getWarehouse().getName(),
-                        orderWarehouseDTO.getWarehouseGoodsDTO().getWarehouse().getLocation(),
-                        orderWarehouseDTO.getWarehouseGoodsDTO().getGoods().getName(),
-                        orderWarehouseDTO.getQuantity()
-                ))
-                .collect(Collectors.toList());
-        deliveryRequestDTO.setWarehouseInfos(warehouseInfos);
+//        List<DeliveryRequestDTO.WarehouseInfo> warehouseInfos = orderDTO.getOrderWarehouses().stream()
+//                .map(orderWarehouseDTO -> new DeliveryRequestDTO.WarehouseInfo(
+//                        orderWarehouseDTO.getWarehouseGoodsDTO().getWarehouse().getName(),
+//                        orderWarehouseDTO.getWarehouseGoodsDTO().getWarehouse().getLocation(),
+//                        orderWarehouseDTO.getWarehouseGoodsDTO().getGoods().getName(),
+//                        orderWarehouseDTO.getQuantity()
+//                ))
+//                .collect(Collectors.toList());
+//        deliveryRequestDTO.setWarehouseInfos(warehouseInfos);
 
         // 发送订单信息给DeliveryCo
         // 序列化为 JSON 字符串

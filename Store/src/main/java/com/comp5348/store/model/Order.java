@@ -16,6 +16,7 @@ public class Order {
     private long id;
 
     @Version
+    @Column(nullable = false)
     private int version;
 
     @ManyToOne
@@ -31,7 +32,4 @@ public class Order {
 
     @Column(nullable = false)
     private double totalPrice;  // 总价格
-
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
-    private List<OrderWarehouse> orderWarehouses;  // 保存订单涉及的仓库信息
 }

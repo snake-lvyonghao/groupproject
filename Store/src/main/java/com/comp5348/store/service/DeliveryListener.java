@@ -13,7 +13,7 @@ public class DeliveryListener {
 
     private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
-    @RabbitListener(queues = "delivery.response.queue")
+//    @RabbitListener(queues = "delivery.response.queue")
     public void receiveDeliveryResponse(String message) {
         try {
             // 反序列化 JSON 为 DeliveryResponseDTO
