@@ -10,6 +10,9 @@ import com.comp5348.grpc.RollbackResponse;
 import com.comp5348.store.dto.OrderDTO;
 import com.comp5348.store.model.Transaction;
 import com.comp5348.store.repository.TransactionRepository;
+import io.seata.rm.tcc.api.BusinessActionContext;
+import io.seata.rm.tcc.api.LocalTCC;
+import io.seata.rm.tcc.api.TwoPhaseBusinessAction;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +22,7 @@ import java.util.concurrent.Future;
 
 import static com.comp5348.store.model.TransactionStatus.*;
 
+@LocalTCC
 @Service
 public class BankService {
 
@@ -31,19 +35,22 @@ public class BankService {
         this.transactionRepository = transactionRepository;
     }
 
+    @TwoPhaseBusinessAction(name = "prepareBankTransaction", commitMethod = "commitTransaction", rollbackMethod = "rollbackTransaction")
     @Transactional
-    public boolean processTransaction(OrderDTO order, boolean isRefund) {
-        // 设置转账的方向
+    public boolean prepareTransaction(BusinessActionContext context, OrderDTO order, boolean isRefund) {
         String fromAccount = isRefund ? "Store" : order.getCustomer().getName();
         String toAccount = isRefund ? order.getCustomer().getName() : "Store";
 
-        // 创建事务记录并保存为OPEN状态
+        // 创建事务记录并保存为 OPEN 状态
         Transaction transaction = new Transaction();
         transaction.setFromAccount(fromAccount);
         transaction.setToAccount(toAccount);
         transaction.setAmount(order.getTotalPrice());
         transaction.setStatus(OPEN);
         transaction = transactionRepository.save(transaction);
+
+        // 把事务 ID 保存到上下文中以便于 commit 和 rollback 阶段使用
+        context.addActionContext("transactionId", transaction.getId());
 
         // 执行银行扣款操作
         Future<PrepareResponse> bankResponseFuture = bankStub.prepare(PrepareRequest.newBuilder()
@@ -53,22 +60,19 @@ public class BankService {
                 .setTransactionId(transaction.getId())
                 .build());
 
-        PrepareResponse bankResponse;
         try {
-            bankResponse = bankResponseFuture.get();
+            PrepareResponse bankResponse = bankResponseFuture.get();
             if (bankResponse.getSuccess()) {
-                // 如果prepare成功，继续执行commit
-                return commitTransaction(transaction.getId());
+                // 如果 prepare 成功，返回 true
+                return true;
             } else {
-                // 如果prepare失败，执行回滚
-                rollbackTransaction(transaction.getId());
+                // 如果 prepare 失败，更新事务状态为 FAILED
                 transaction.setStatus(FAILED);
                 transactionRepository.save(transaction);
                 return false;
             }
         } catch (InterruptedException | ExecutionException e) {
-            // 如果出现异常，执行回滚
-            rollbackTransaction(transaction.getId());
+            // 如果出现异常，更新事务状态为 FAILED
             transaction.setStatus(FAILED);
             transactionRepository.save(transaction);
             throw new RuntimeException("Prepare phase failed.", e);
@@ -76,8 +80,10 @@ public class BankService {
     }
 
     @Transactional
-    protected boolean commitTransaction(Long transactionId) {
-        // 执行commit操作
+    public boolean commitTransaction(BusinessActionContext context) {
+        Long transactionId = (Long) context.getActionContext("transactionId");
+
+        // 执行 commit 操作
         Future<CommitResponse> commitResponseFuture = bankStub.commit(CommitRequest.newBuilder()
                 .setTransactionId(transactionId)
                 .build());
@@ -85,7 +91,7 @@ public class BankService {
         try {
             CommitResponse commitResponse = commitResponseFuture.get();
             if (commitResponse.getSuccess()) {
-                // 如果commit成功，更新事务状态为SUCCESS
+                // 如果 commit 成功，更新事务状态为 SUCCESS
                 Transaction transaction = transactionRepository.findById(transactionId).orElse(null);
                 if (transaction != null) {
                     transaction.setStatus(SUCCESS);
@@ -93,19 +99,21 @@ public class BankService {
                 }
                 return true;
             } else {
-                // 如果commit失败，执行回滚
-                rollbackTransaction(transactionId);
+                // 如果 commit 失败，执行回滚
+                rollbackTransaction(context);
                 return false;
             }
         } catch (InterruptedException | ExecutionException e) {
-            rollbackTransaction(transactionId);
+            rollbackTransaction(context);
             throw new RuntimeException("Commit phase failed.", e);
         }
     }
 
     @Transactional
-    protected void rollbackTransaction(Long transactionId) {
-        // 执行rollback操作
+    public void rollbackTransaction(BusinessActionContext context) {
+        Long transactionId = (Long) context.getActionContext("transactionId");
+
+        // 执行 rollback 操作
         Future<RollbackResponse> rollbackResponseFuture = bankStub.rollback(RollbackRequest.newBuilder()
                 .setTransactionId(transactionId)
                 .build());
@@ -113,7 +121,7 @@ public class BankService {
         try {
             RollbackResponse rollbackResponse = rollbackResponseFuture.get();
             if (rollbackResponse.getSuccess()) {
-                // 更新事务状态为FAILURE
+                // 更新事务状态为 FAILED
                 Transaction transaction = transactionRepository.findById(transactionId).orElse(null);
                 if (transaction != null) {
                     transaction.setStatus(FAILED);
