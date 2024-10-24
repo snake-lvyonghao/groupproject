@@ -8,8 +8,7 @@ services:
     environment:
       - SEATA_PORT=8091
       - STORE_MODE=file
-    volumes:
-      - ./seata-config:/seata-server/resources # 挂载外部配置，便于调整 Seata 配置
+
 
   rabbitmq:
     container_name: 'rabbitmq'
