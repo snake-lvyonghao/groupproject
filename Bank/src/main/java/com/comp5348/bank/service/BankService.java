@@ -62,7 +62,7 @@ public class BankService extends BankServiceGrpc.BankServiceImplBase {
 
     @Override
     public void commit(CommitRequest request, StreamObserver<CommitResponse> responseObserver) {
-        TransactionRecord transactionRecord = transactionRecordRepository.findByTransactionId(request.getTransactionId()).orElse(null);
+        TransactionRecord transactionRecord = transactionRecordRepository.findById(request.getTransactionId()).orElse(null);
         if (transactionRecord == null || transactionRecord.getStatus() != TransactionStatus.PENDING) {
             responseObserver.onNext(CommitResponse.newBuilder().setSuccess(false).build());
             responseObserver.onCompleted();
@@ -96,7 +96,7 @@ public class BankService extends BankServiceGrpc.BankServiceImplBase {
 
     @Override
     public void rollback(RollbackRequest request, StreamObserver<RollbackResponse> responseObserver) {
-        TransactionRecord transactionRecord = transactionRecordRepository.findByTransactionId(request.getTransactionId()).orElse(null);
+        TransactionRecord transactionRecord = transactionRecordRepository.findById(request.getTransactionId()).orElse(null);
         if (transactionRecord == null) {
             responseObserver.onNext(RollbackResponse.newBuilder().setSuccess(false).build());
             responseObserver.onCompleted();

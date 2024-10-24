@@ -11,7 +11,7 @@ public class MessagingConfig {
     public static final String EMAIL_QUEUE = "email.request.queue";
 
     // Bean definition for RabbitMQ queue
-    // Creates and registers a RabbitMQ queue bean named trade_queue
+    // Creates and registers a RabbitMQ queue bean named "delivery.request.queue"
     @Bean
     public Queue delivery_queue() {
         return new Queue(DELIVERY_QUEUE, true);
