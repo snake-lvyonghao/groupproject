@@ -17,5 +17,5 @@ import java.util.List;
 public class EmailRequestDTO {
     private String customerName;
     private String customerEmail;
-    private String DeliveryStatus;
+    private int DeliveryStatus;
 }
