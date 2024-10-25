@@ -4,6 +4,7 @@ public enum DeliveryStatus {
     REQUEST_RECEIVED,
     PREPARING,
     SHIPPED,
-    DELIVERED;
+    DELIVERED,
+    LOST;//这个代表丢件了
 
 }
