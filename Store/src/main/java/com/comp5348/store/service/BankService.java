@@ -84,6 +84,15 @@ public class BankService {
     public boolean commitTransaction(BusinessActionContext context) {
         Integer transactionId = (Integer) context.getActionContext("transactionId");
 
+        // 获取事务记录
+        Transaction transaction = transactionRepository.findById(Long.valueOf(transactionId)).orElse(null);
+        if (transaction == null || transaction.getStatus() == SUCCESS) {
+            log.info("Transaction {} is already committed or does not exist.", transactionId);
+            return true; // 如果事务已经成功提交或者不存在，直接返回成功
+        }
+
+        log.info("Attempting to commit transaction with ID: {}", transactionId);
+
         // 执行 commit 操作
         Future<CommitResponse> commitResponseFuture = bankStub.commit(CommitRequest.newBuilder()
                 .setTransactionId(transactionId)
@@ -93,26 +102,33 @@ public class BankService {
             CommitResponse commitResponse = commitResponseFuture.get();
             if (commitResponse.getSuccess()) {
                 // 如果 commit 成功，更新事务状态为 SUCCESS
-                Transaction transaction = transactionRepository.findById(Long.valueOf(transactionId)).orElse(null);
-                if (transaction != null) {
-                    transaction.setStatus(SUCCESS);
-                    transactionRepository.save(transaction);
-                }
+                transaction.setStatus(SUCCESS);
+                transactionRepository.save(transaction);
+                log.info("Commit successful for transactionId: {}", transactionId);
                 return true;
             } else {
-                // 如果 commit 失败，执行回滚
-                rollbackTransaction(context);
-                return false;
+                log.warn("Commit failed for transactionId: {}", transactionId);
+                return false; // 告知 Seata 提交失败，Seata 会决定是否重试或回滚
             }
         } catch (InterruptedException | ExecutionException e) {
-            rollbackTransaction(context);
-            throw new RuntimeException("Commit phase failed.", e);
+            log.error("Exception occurred during commit for transactionId: {}. Error: {}", transactionId, e.getMessage(), e);
+            return false; // 返回 false，让 Seata 处理重试或回滚逻辑
         }
     }
 
 
-    public void rollbackTransaction(BusinessActionContext context) {
+
+    public boolean rollbackTransaction(BusinessActionContext context) {
         Integer transactionId = (Integer) context.getActionContext("transactionId");
+
+        // 获取事务记录
+        Transaction transaction = transactionRepository.findById(Long.valueOf(transactionId)).orElse(null);
+        if (transaction == null || transaction.getStatus() == FAILED) {
+            log.info("Transaction {} is already rolled back or does not exist.", transactionId);
+            return true; // 如果事务已经回滚或者不存在，直接返回成功，避免重复回滚
+        }
+
+        log.info("Attempting to rollback transaction with ID: {}", transactionId);
 
         // 执行 rollback 操作
         Future<RollbackResponse> rollbackResponseFuture = bankStub.rollback(RollbackRequest.newBuilder()
@@ -122,15 +138,19 @@ public class BankService {
         try {
             RollbackResponse rollbackResponse = rollbackResponseFuture.get();
             if (rollbackResponse.getSuccess()) {
-                // 更新事务状态为 FAILED
-                Transaction transaction = transactionRepository.findById(Long.valueOf(transactionId)).orElse(null);
-                if (transaction != null) {
-                    transaction.setStatus(FAILED);
-                    transactionRepository.save(transaction);
-                }
+                // 如果 rollback 成功，更新事务状态为 FAILED
+                transaction.setStatus(FAILED);
+                transactionRepository.save(transaction);
+                log.info("Rollback successful for transactionId: {}", transactionId);
+                return true; // 回滚成功
+            } else {
+                log.error("Rollback failed for transactionId: {}", transactionId);
+                return false; // 告知 Seata 回滚失败
             }
         } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException("Rollback phase failed.", e);
+            log.error("Exception occurred during rollback for transactionId: {}. Error: {}", transactionId, e.getMessage(), e);
+            return false; // 返回 false，让 Seata 决定如何处理
         }
     }
+
 }

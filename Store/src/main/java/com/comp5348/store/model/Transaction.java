@@ -15,6 +15,5 @@ public class Transaction {
     private String fromAccount;
     private String toAccount;
     private double amount;
-
     private TransactionStatus status;
 }

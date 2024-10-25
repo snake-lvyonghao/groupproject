@@ -6,19 +6,19 @@ import com.comp5348.store.dto.OrderDTO;
 import com.comp5348.store.model.*;
 import com.comp5348.store.repository.*;
 import io.seata.rm.tcc.api.BusinessActionContext;
+import io.seata.rm.tcc.api.LocalTCC;
 import io.seata.spring.annotation.GlobalTransactional;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
+@LocalTCC
 public class OrderService {
 
     private final OrderRepository orderRepository;
@@ -26,7 +26,6 @@ public class OrderService {
     private final CustomerRepository customerRepository;
     private final WarehouseGoodsService warehouseGoodsService;
     private final BankService bankService;
-    private static final Logger log = LoggerFactory.getLogger(OrderController.class);
 
     @Autowired
     public OrderService(OrderRepository orderRepository, GoodsRepository goodsRepository, CustomerRepository customerRepository, WarehouseGoodsService warehouseGoodsService, BankService bankService) {
@@ -44,9 +43,9 @@ public class OrderService {
         Optional<Customer> customerOptional = customerRepository.findById(customerId);
 
         if (goodsOptional.isEmpty()) {
-            throw new IllegalArgumentException("Invalid goods or customer ID.");
+            throw new IllegalArgumentException("Invalid goods ID.");
         } else if (customerOptional.isEmpty()) {
-            throw new IllegalArgumentException("Invalid goods or customer ID.");
+            throw new IllegalArgumentException("Invalid customer ID.");
         }
 
         Goods goods = goodsOptional.get();
@@ -61,31 +60,34 @@ public class OrderService {
         order.setCustomer(customer);
         order.setTotalQuantity(quantity);
         order.setTotalPrice(totalPrice);
+
         // 保存订单到数据库
         order = orderRepository.save(order);
 
         // 创建上下文对象
         BusinessActionContext actionContext = new BusinessActionContext();
 
-        // 尝试冻结余额
+        // 1. 尝试冻结库存
+        boolean stockFrozen = warehouseGoodsService.tryFreezeStock(actionContext, goodsId, quantity, order);
+        if (!stockFrozen) {
+            throw new RuntimeException("Stock freezing failed. Insufficient inventory.");
+        }
+
+        // 2. 尝试冻结余额（扣款）
         OrderDTO orderDTO = new OrderDTO(order, true);
         boolean paymentSuccess = bankService.prepareTransaction(actionContext, orderDTO, false);
         if (!paymentSuccess) {
             throw new RuntimeException("Payment freezing failed.");
         }
-        // 尝试冻结库存
-        boolean stockFrozen = warehouseGoodsService.tryFreezeStock(actionContext, goodsId, quantity, order);
-        if (!stockFrozen) {
-            throw new RuntimeException("Stock freezing failed. Insufficient inventory.");
-        }
+
         //TODO 通知DeliveryCO取货
-        return new OrderDTO(order,true);
+
+        return new OrderDTO(order, true);
     }
 
 
 
     //Refund order
-    @Transactional
     @GlobalTransactional
     public boolean cancelOrder(Long orderId) {
         // 查找订单
@@ -100,6 +102,10 @@ public class OrderService {
         // 创建上下文对象
         BusinessActionContext actionContext = new BusinessActionContext();
         actionContext.addActionContext("orderId",orderId);
+        boolean warehouseSuccess = warehouseGoodsService.cancelFreezeStock(actionContext);
+        if (!warehouseSuccess) {
+            throw new RuntimeException("cancel stock failed");
+        }
         OrderDTO orderDTO = new OrderDTO(order,true);
         // 尝试冻结余额
         boolean paymentSuccess = bankService.prepareTransaction(actionContext, orderDTO,false);
@@ -107,10 +113,7 @@ public class OrderService {
             throw new RuntimeException("Payment failed");
         }
 
-        boolean warehouseSuccess = warehouseGoodsService.cancelFreezeStock(actionContext);
-        if (!warehouseSuccess) {
-            throw new RuntimeException("cancel stock failed");
-        }
+
 
         //TODO 通知Email
         orderRepository.delete(order);
