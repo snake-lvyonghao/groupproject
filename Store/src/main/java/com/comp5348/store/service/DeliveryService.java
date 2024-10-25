@@ -2,6 +2,7 @@ package com.comp5348.store.service;
 
 import com.comp5348.Common.dto.DeliveryRequestDTO;
 import com.comp5348.Common.dto.DeliveryResponseDTO;
+import com.comp5348.Common.model.DeliveryStatus;
 import com.comp5348.store.dto.OrderDTO;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -58,10 +59,16 @@ public class DeliveryService {
 
         try {
             // 反序列化 JSON 为 DeliveryResponseDTO
-            DeliveryResponseDTO requestDTO = mapper.readValue(message, DeliveryResponseDTO.class);
+            DeliveryResponseDTO responseDTO = mapper.readValue(message, DeliveryResponseDTO.class);
             System.out.println("Received delivery response: " + requestDTO);
 
             // 这里写的是在Store收到DeliveryCo的消息之后的逻辑。
+            if (responseDTO.getDeliveryStatus()== DeliveryStatus.LOST){
+                //这里是丢件后的逻辑。
+            }
+            else{
+                //这里是通过email向用户发送信息。
+            }
             //调用emailService给用户发现消息。
 
         } catch (Exception e) {
