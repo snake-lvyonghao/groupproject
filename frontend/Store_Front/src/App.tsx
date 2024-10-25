@@ -1,11 +1,12 @@
+import { Box } from "@chakra-ui/react";
 import "./App.css";
-import SignIn from "./components/SignIn";
+import MainPage from "./components/MainPage";
 
 function App() {
   return (
-    <>
-      <SignIn />
-    </>
+    <Box height="100vh" width="100vw">
+      <MainPage />
+    </Box>
   );
 }
 
