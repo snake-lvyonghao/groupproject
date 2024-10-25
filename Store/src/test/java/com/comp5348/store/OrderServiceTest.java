@@ -40,8 +40,8 @@ public class OrderServiceTest {
         objectMapper.registerModule(new JavaTimeModule());
     }
 
-    OrderDTO createOrderDTO() {
-
+    @Test
+    public void testSendDeliveryRequest() throws JsonProcessingException {
         // 创建客户对象
         Customer customer = new Customer();
         customer.setId(123L);
@@ -84,18 +84,7 @@ public class OrderServiceTest {
         order.setTotalQuantity(10);
         order.setTotalPrice(goods.getPrice() * 10);
         OrderDTO orderDTO = new OrderDTO(order);
-        orderDTO.setOrderWarehouses(List.of(orderWarehouseDTO));
-
-        return orderDTO;
-
-    }
-
-    @Test
-    public void testSendDeliveryRequest() throws JsonProcessingException {
-
-        //创建orderDTO
-        OrderDTO orderDTO= createOrderDTO();
-
+//        orderDTO.setOrderWarehouses(List.of(orderWarehouseDTO));
 
         // 调用被测试方法
         deliveryService.sendDeliveryRequest(orderDTO);
@@ -114,15 +103,5 @@ public class OrderServiceTest {
         assertEquals("Warehouse A", capturedRequest.getWarehouseInfos().get(0).getWarehouseName());
         assertEquals("Sydney", capturedRequest.getWarehouseInfos().get(0).getWarehouseAddress());
         assertEquals(10, capturedRequest.getWarehouseInfos().get(0).getQuantity());
-    }
-
-    @Test
-    public void testSendDeliveryRequest1() throws JsonProcessingException {
-        //创建orderDTO
-        OrderDTO orderDTO= createOrderDTO();
-
-
-        // 调用被测试方法
-        deliveryService.sendDeliveryRequest(orderDTO);
     }
 }

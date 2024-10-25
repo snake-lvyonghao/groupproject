@@ -6,13 +6,12 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class DeliveryResponseMessagingConfig {
-    //这是快递公司返回信息的queue.
     public static final String QUEUE = "delivery.response.queue";
 
     // Bean definition for RabbitMQ queue
-    // Creates and registers a RabbitMQ queue bean named "delivery.response.queue"
+    // Creates and registers a RabbitMQ queue bean named trade_queue
     @Bean
-    public Queue queue() {
+    public Queue deliveryResponseQueue() {
         return new Queue(QUEUE, true);
     }
 }
