@@ -1,4 +1,4 @@
-import { Grid, GridItem } from "@chakra-ui/react";
+import { Box, Grid, GridItem } from "@chakra-ui/react";
 import { useState } from "react";
 import Cart from "./Cart";
 import Navbar from "./Navbar";
@@ -44,22 +44,24 @@ const MainPage = () => {
   }
 
   return (
-    <Grid
-      height="100vh"
-      templateAreas={`"header header" "nav main"`}
-      gridTemplateRows="80px 1fr"
-      gridTemplateColumns="300px 1fr"
-    >
-      <GridItem area="header" bg="tomato" p={2} color="white">
-        <h1>STORE</h1>
-      </GridItem>
-      <GridItem area="nav" p={2} color="white">
-        <Navbar onClick={SetMain} />
-      </GridItem>
-      <GridItem area="main" p={2} color="white">
-        {mainAreaComponent}
-      </GridItem>
-    </Grid>
+    <Box height="100vh" width="100vw">
+      <Grid
+        height="100vh"
+        templateAreas={`"header header" "nav main"`}
+        gridTemplateRows="80px 1fr"
+        gridTemplateColumns="300px 1fr"
+      >
+        <GridItem area="header" bg="tomato" p={2} color="white">
+          <h1>STORE</h1>
+        </GridItem>
+        <GridItem area="nav" p={2} color="white">
+          <Navbar onClick={SetMain} />
+        </GridItem>
+        <GridItem area="main" p={2} color="white">
+          {mainAreaComponent}
+        </GridItem>
+      </Grid>
+    </Box>
   );
 };
 

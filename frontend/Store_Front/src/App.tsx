@@ -1,12 +1,16 @@
-import { Box } from "@chakra-ui/react";
+import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import "./App.css";
 import MainPage from "./components/MainPage";
+import SignIn from "./components/SignIn";
 
 function App() {
   return (
-    <Box height="100vh" width="100vw">
-      <MainPage />
-    </Box>
+    <Router>
+      <Routes>
+        <Route path="/" element={<SignIn />} />
+        <Route path="/mainpage/:email" element={<MainPage />} />
+      </Routes>
+    </Router>
   );
 }
 
