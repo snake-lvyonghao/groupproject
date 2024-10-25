@@ -16,9 +16,13 @@ public class MessagingConfigTest {
     @Autowired
     private Queue emailQueue;
 
+    @Autowired
+    private Queue queue;
+
     @Test
     public void testQueuesAreCreated() {
         assertThat(deliveryQueue).isNotNull();
         assertThat(emailQueue).isNotNull();
+        assertThat(queue).isNotNull();
     }
 }
