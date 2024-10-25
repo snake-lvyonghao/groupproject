@@ -60,7 +60,7 @@ public class DeliveryService {
         try {
             // 反序列化 JSON 为 DeliveryResponseDTO
             DeliveryResponseDTO responseDTO = mapper.readValue(message, DeliveryResponseDTO.class);
-            System.out.println("Received delivery response: " + requestDTO);
+            System.out.println("Received delivery response: " + responseDTO);
 
             // 这里写的是在Store收到DeliveryCo的消息之后的逻辑。
             if (responseDTO.getDeliveryStatus()== DeliveryStatus.LOST){
