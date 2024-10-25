@@ -1,7 +1,6 @@
 package com.comp5348.store.service;
 
 
-import com.comp5348.store.controller.OrderController;
 import com.comp5348.store.dto.OrderDTO;
 import com.comp5348.store.model.*;
 import com.comp5348.store.repository.*;
@@ -9,8 +8,6 @@ import io.seata.rm.tcc.api.BusinessActionContext;
 import io.seata.rm.tcc.api.LocalTCC;
 import io.seata.spring.annotation.GlobalTransactional;
 import jakarta.transaction.Transactional;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.List;
@@ -87,38 +84,36 @@ public class OrderService {
 
 
 
-    //Refund order
     @GlobalTransactional
     public boolean cancelOrder(Long orderId) {
         // 查找订单
         Optional<Order> orderOptional = orderRepository.findById(orderId);
-
         if (orderOptional.isEmpty()) {
-            return false;  // 如果订单不存在，返回 false
+            throw new IllegalArgumentException("Invalid order ID.");
         }
 
         Order order = orderOptional.get();
 
-        // 创建上下文对象
+        // 获取上下文对象
         BusinessActionContext actionContext = new BusinessActionContext();
-        actionContext.addActionContext("orderId",orderId);
-        boolean warehouseSuccess = warehouseGoodsService.cancelFreezeStock(actionContext);
-        if (!warehouseSuccess) {
-            throw new RuntimeException("cancel stock failed");
-        }
-        OrderDTO orderDTO = new OrderDTO(order,true);
-        // 尝试冻结余额
-        boolean paymentSuccess = bankService.prepareTransaction(actionContext, orderDTO,false);
-        if (!paymentSuccess) {
-            throw new RuntimeException("Payment failed");
+
+        // 1. 回滚冻结的库存
+        boolean stockUnfrozen = warehouseGoodsService.cancelOrder(actionContext, orderId);
+        if (!stockUnfrozen) {
+            throw new RuntimeException("Stock return failed.");
         }
 
+        // 2. 回滚冻结的余额（退款）
+        OrderDTO orderDTO = new OrderDTO(order, true);
+        boolean refundSuccess = bankService.prepareTransaction(actionContext, orderDTO, true);
+        if (!refundSuccess) {
+            throw new RuntimeException("Payment refund failed.");
+        }
 
-
-        //TODO 通知Email
-        orderRepository.delete(order);
+        //TODO Email 通知客户
         return true;
     }
+
 
 
     public OrderDTO getOrderById(Long orderId) {
