@@ -99,7 +99,6 @@ public class WarehouseGoodsService {
             // 更新剩余数量
             remainingQuantity -= allocatedQuantity;
 
-
         }
 
         // 检查是否所有商品数量都已分配完
@@ -132,6 +131,7 @@ public class WarehouseGoodsService {
                     // 删除 OrderWarehouse 记录
                     orderWarehouseRepository.delete(orderWarehouse);
                 });
+        orderRepository.delete(order);
         return true;
     }
 
