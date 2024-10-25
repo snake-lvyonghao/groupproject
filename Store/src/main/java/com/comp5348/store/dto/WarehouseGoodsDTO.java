@@ -11,7 +11,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class WarehouseGoodsDTO {
-    private Long id;
+    private long id;
     private WarehouseDTO warehouse;
     private GoodsDTO goods;
     private int quantity;

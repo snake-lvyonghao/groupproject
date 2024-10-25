@@ -1,10 +1,16 @@
 package com.comp5348.store.service;
 
 
+import com.comp5348.store.controller.OrderController;
 import com.comp5348.store.dto.OrderDTO;
 import com.comp5348.store.model.*;
 import com.comp5348.store.repository.*;
+import io.seata.rm.tcc.api.BusinessActionContext;
+import io.seata.rm.tcc.api.LocalTCC;
+import io.seata.spring.annotation.GlobalTransactional;
 import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.List;
@@ -12,36 +18,34 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
+@LocalTCC
 public class OrderService {
 
     private final OrderRepository orderRepository;
     private final GoodsRepository goodsRepository;
     private final CustomerRepository customerRepository;
     private final WarehouseGoodsService warehouseGoodsService;
-    private final OrderWarehouseRepository orderWarehouseRepository;
     private final BankService bankService;
 
-
     @Autowired
-    public OrderService(OrderRepository orderRepository, GoodsRepository goodsRepository, CustomerRepository customerRepository, WarehouseGoodsService warehouseGoodsService, OrderWarehouseRepository orderWarehouseRepository, BankService bankService) {
+    public OrderService(OrderRepository orderRepository, GoodsRepository goodsRepository, CustomerRepository customerRepository, WarehouseGoodsService warehouseGoodsService, BankService bankService) {
         this.orderRepository = orderRepository;
         this.goodsRepository = goodsRepository;
         this.customerRepository = customerRepository;
         this.warehouseGoodsService = warehouseGoodsService;
-        this.orderWarehouseRepository = orderWarehouseRepository;
         this.bankService = bankService;
     }
 
-    @Transactional
+    @GlobalTransactional
     public OrderDTO createOrder(Long goodsId, Long customerId, int quantity) {
         // 查找商品和客户
         Optional<Goods> goodsOptional = goodsRepository.findById(goodsId);
         Optional<Customer> customerOptional = customerRepository.findById(customerId);
 
         if (goodsOptional.isEmpty()) {
-            throw new IllegalArgumentException("Invalid goods or customer ID.");
+            throw new IllegalArgumentException("Invalid goods ID.");
         } else if (customerOptional.isEmpty()) {
-            throw new IllegalArgumentException("Invalid goods or customer ID.");
+            throw new IllegalArgumentException("Invalid customer ID.");
         }
 
         Goods goods = goodsOptional.get();
@@ -56,59 +60,35 @@ public class OrderService {
         order.setCustomer(customer);
         order.setTotalQuantity(quantity);
         order.setTotalPrice(totalPrice);
+
         // 保存订单到数据库
         order = orderRepository.save(order);
 
-        int remainingQuantity = quantity;
-        List<WarehouseGoods> availableWarehouseGoods = warehouseGoodsService.findByGoodsId(goodsId);
+        // 创建上下文对象
+        BusinessActionContext actionContext = new BusinessActionContext();
 
-        for (WarehouseGoods warehouseGoods : availableWarehouseGoods) {
-            if (remainingQuantity <= 0) break;
-
-            int availableQuantity = warehouseGoods.getQuantity();
-            int allocatedQuantity = Math.min(remainingQuantity, availableQuantity);
-
-            // 创建OrderWarehouse对象
-            OrderWarehouse orderWarehouse = new OrderWarehouse();
-            orderWarehouse.setOrder(order);
-            orderWarehouse.setWarehouseGoods(warehouseGoods);
-            orderWarehouse.setQuantity(allocatedQuantity);
-
-            // 保存OrderWarehouse到数据库
-            orderWarehouseRepository.save(orderWarehouse);
-            
-            // 更新剩余数量
-            remainingQuantity -= allocatedQuantity;
+        // 1. 尝试冻结库存
+        boolean stockFrozen = warehouseGoodsService.tryFreezeStock(actionContext, goodsId, quantity, order);
+        if (!stockFrozen) {
+            throw new RuntimeException("Stock freezing failed. Insufficient inventory.");
         }
 
-        // 检查是否所有商品数量都已分配完
-        if (remainingQuantity > 0) {
-            throw new RuntimeException("The inventory is insufficient to meet the order demand.");
-        }
-
-        //Grpc process payment
-        OrderDTO orderDTO = new OrderDTO(order,true);
-        boolean paymentSuccess = bankService.processTransaction(orderDTO,false);
+        // 2. 尝试冻结余额（扣款）
+        OrderDTO orderDTO = new OrderDTO(order, true);
+        boolean paymentSuccess = bankService.prepareTransaction(actionContext, orderDTO, false);
         if (!paymentSuccess) {
-            throw new RuntimeException("Payment failed");
+            throw new RuntimeException("Payment freezing failed.");
         }
-
-        // 更新仓库的商品数量
-        orderWarehouseRepository.findByOrder(order)
-                .forEach(orderWarehouse ->
-                        warehouseGoodsService.adjustGoodsQuantity(
-                                orderWarehouse.getWarehouseGoods(),
-                                orderWarehouse.getQuantity(),
-                                true
-                        )
-                );
 
         //TODO 通知DeliveryCO取货
-        return new OrderDTO(order,true);
+
+        return new OrderDTO(order, true);
     }
 
+
+
     //Refund order
-    @Transactional
+    @GlobalTransactional
     public boolean cancelOrder(Long orderId) {
         // 查找订单
         Optional<Order> orderOptional = orderRepository.findById(orderId);
@@ -118,26 +98,24 @@ public class OrderService {
         }
 
         Order order = orderOptional.get();
+
+        // 创建上下文对象
+        BusinessActionContext actionContext = new BusinessActionContext();
+        actionContext.addActionContext("orderId",orderId);
+        boolean warehouseSuccess = warehouseGoodsService.cancelFreezeStock(actionContext);
+        if (!warehouseSuccess) {
+            throw new RuntimeException("cancel stock failed");
+        }
         OrderDTO orderDTO = new OrderDTO(order,true);
-        boolean paymentSuccess = bankService.processTransaction(orderDTO,false);
+        // 尝试冻结余额
+        boolean paymentSuccess = bankService.prepareTransaction(actionContext, orderDTO,false);
         if (!paymentSuccess) {
             throw new RuntimeException("Payment failed");
         }
-        //TODO Email notify customer
-        //退货到 OrderWarehouse
-        orderWarehouseRepository.findByOrder(order)
-                .forEach(orderWarehouse -> {
-                    // 调整库存，退回商品数量
-                    warehouseGoodsService.adjustGoodsQuantity(
-                            orderWarehouse.getWarehouseGoods(),
-                            orderWarehouse.getQuantity(),
-                            true
-                    );
-                    // 删除 OrderWarehouse 记录
-                    orderWarehouseRepository.delete(orderWarehouse);
-                });
 
-        // 删除订单
+
+
+        //TODO 通知Email
         orderRepository.delete(order);
         return true;
     }

@@ -63,6 +63,7 @@ subprojects {
 
 		// seata
 		implementation 'io.seata:seata-spring-boot-starter:2.0.0'
+//		implementation 'io.seata:seata-all:2.0.0'
 	}
 
 	protobuf {

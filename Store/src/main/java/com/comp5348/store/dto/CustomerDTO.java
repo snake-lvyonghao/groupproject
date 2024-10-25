@@ -12,7 +12,7 @@ import java.util.Set;
 @Setter
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class CustomerDTO {
-    private Long id;
+    private long id;
     private String name;
     private String password;
     private String email;

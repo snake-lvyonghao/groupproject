@@ -15,6 +15,7 @@ public class Warehouse {
     private long id;
 
     @Version
+    @Column(nullable = false)
     private int version;
 
     @Column(nullable = false)

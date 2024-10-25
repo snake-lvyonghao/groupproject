@@ -39,3 +39,4 @@ tasks.named('test') {
 springBoot {
 	mainClass = 'com.comp5348.store.StoreApplication'
 }
+

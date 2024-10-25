@@ -12,7 +12,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @JsonInclude(value = JsonInclude.Include.NON_EMPTY)
 public class OrderWarehouseDTO {
-    private Long id;
+    private long id;
     private OrderDTO order;
     private WarehouseGoodsDTO warehouseGoodsDTO;
     private int quantity;

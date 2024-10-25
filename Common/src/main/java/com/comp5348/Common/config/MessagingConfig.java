@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class MessagingConfig {
     public static final String DELIVERY_QUEUE = "delivery.request.queue";
+    public static final String DELIVERR_RESPONSE_QUEUE = "delivery.response.queue";
     public static final String EMAIL_QUEUE = "email.request.queue";
 
     // Bean definition for RabbitMQ queue
@@ -14,6 +15,11 @@ public class MessagingConfig {
     @Bean
     public Queue deliveryQueue() {
         return new Queue(DELIVERY_QUEUE, true);
+    }
+
+    @Bean
+    public Queue emailResponseQueue(){
+        return new Queue(DELIVERR_RESPONSE_QUEUE, true);
     }
 
     @Bean

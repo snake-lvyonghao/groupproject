@@ -14,7 +14,6 @@ public class OrderDTO {
     private CustomerDTO customer;  // 客户信息
     private int totalQuantity;  // 商品的总数量
     private double totalPrice;  // 总价格
-    private List<OrderWarehouseDTO> orderWarehouses;  // 涉及的仓库信息
 
     /**
      * Constructs an OrderDTO from an Order entity.
@@ -30,9 +29,6 @@ public class OrderDTO {
         if (includeRelatedEntities) {
             this.goods = new GoodsDTO(orderEntity.getGoods());
             this.customer = new CustomerDTO(orderEntity.getCustomer());
-            this.orderWarehouses = orderEntity.getOrderWarehouses().stream()
-                    .map(OrderWarehouseDTO::new)
-                    .toList();
         }
     }
 

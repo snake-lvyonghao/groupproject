@@ -10,9 +10,12 @@ import lombok.Setter;
 @Entity
 
 public class WarehouseGoods {
+    @Version
+    @Column(nullable = false)
+    private int version;
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private long id;
 
     @ManyToOne
     @JoinColumn(name = "warehouse_id", nullable = false)

@@ -10,8 +10,7 @@ import lombok.Setter;
 @NoArgsConstructor
 public class TransactionRecord {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private long id;
     private String fromAccount;
     private String toAccount;
     private double amount;
