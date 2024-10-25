@@ -5,12 +5,15 @@ import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { Field } from "../components/ui/field";
+import PostSender from "./RESTFul/PostSender";
+import { UserEndPoint } from "./services/EndPoints";
 import { PasswordInput } from "./ui/password-input";
 
 const schema = z.object({
   EmailAddress: z.string().email({ message: "Please enter a valid email." }),
   Password: z.string().min(1, { message: "please input password." }),
 });
+const ENDPOINT = UserEndPoint;
 
 type FormData = z.infer<typeof schema>;
 
@@ -24,19 +27,22 @@ const SignIn = () => {
   const [status, setStatus] = useState(0);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [email, setEmail] = useState("");
 
   //navigate
   const navigate = useNavigate();
 
   //用useEffect来检测登录状态登录成功时跳转。
   useEffect(() => {
-    if (status != 0) console.log(status);
-    if (message) console.log(message);
-    if (error) console.log(error);
+    if (status === 200) navigate(`/mainpage/${email}`);
+    if (!message) console.log(message);
+    if (!error) console.log(error);
   }, [status, message, error]);
 
   const onSubmit = (data: FormData) => {
-    console.log(data);
+    PostSender(ENDPOINT, data, setStatus, setMessage, setError);
+    setEmail(data.EmailAddress);
+    //这个跳转只是用来测试的
     navigate(`/mainpage/${data.EmailAddress}`);
   };
 

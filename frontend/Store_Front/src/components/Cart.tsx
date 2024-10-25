@@ -1,6 +1,7 @@
-import { Stack } from "@chakra-ui/react";
+import { Container, Stack } from "@chakra-ui/react";
 import CartCard from "./CartCard";
 import { cartProduct } from "./MainPage";
+import { Toaster } from "./ui/toaster";
 
 interface props {
   cartProducts: cartProduct[];
@@ -10,6 +11,7 @@ interface props {
 const Cart = ({ cartProducts, Remove }: props) => {
   return (
     <Stack gap="4" direction="row" wrap="wrap">
+      <Toaster />
       {cartProducts?.map((cartProduct: cartProduct) => (
         <CartCard
           cartProduct={cartProduct}
@@ -17,6 +19,11 @@ const Cart = ({ cartProducts, Remove }: props) => {
           Remove={Remove}
         />
       ))}
+      {cartProducts.length === 0 ? (
+        <Container color="gray.300" width="100%">
+          Nothing here.
+        </Container>
+      ) : null}
     </Stack>
   );
 };

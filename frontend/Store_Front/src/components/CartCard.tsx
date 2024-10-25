@@ -1,6 +1,9 @@
-import { Box, Button, Card, HStack, useDisclosure } from "@chakra-ui/react";
-import React from "react";
+import { Box, Button, Card, HStack } from "@chakra-ui/react";
+import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import { cartProduct } from "./MainPage";
+import PostSender from "./RESTFul/PostSender";
+import { OrderEndPoint } from "./services/EndPoints";
 import {
   DialogActionTrigger,
   DialogBody,
@@ -12,7 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "./ui/dialog";
-import { toaster } from "./ui/toaster";
+import { Toaster, toaster } from "./ui/toaster";
 
 interface props {
   cartProduct: cartProduct;
@@ -21,9 +24,24 @@ interface props {
 }
 
 const CartCard = ({ cartProduct, cartProducts, Remove }: props) => {
-  //弹窗控制
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const cancelRef = React.useRef<HTMLButtonElement>(null);
+  const { EmailAddress } = useParams();
+  const ENDPOINT = OrderEndPoint + "/" + EmailAddress;
+
+  const [status, setStatus] = useState(0);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  //用useEffect来检测订单提交的返回值;
+  useEffect(() => {
+    if (status === 200) {
+      toaster.create({
+        title: "Check out successfully.",
+        type: "success",
+      });
+    }
+    if (message) console.log(message);
+    if (error) console.log(error);
+  }, [status, message, error]);
 
   const onClick = () => {
     //1.发送POST请求。
@@ -34,6 +52,7 @@ const CartCard = ({ cartProduct, cartProducts, Remove }: props) => {
       quantity: cartProduct.quantity,
     };
     //这里还差发送POST的逻辑
+    PostSender(ENDPOINT, order, setStatus, setMessage, setError);
 
     //2.从购物车中删除该商品.
     console.log(cartProduct.cart_id);
@@ -50,6 +69,7 @@ const CartCard = ({ cartProduct, cartProducts, Remove }: props) => {
 
   return (
     <Card.Root width="90% " variant="elevated" key={cartProduct.id}>
+      <Toaster />
       <Card.Body gap="2">
         <Card.Title mb="2">{cartProduct.name}</Card.Title>
         <Card.Description>

@@ -1,5 +1,4 @@
 import { Stack } from "@chakra-ui/react";
-import { z } from "zod";
 import useGet from "../hooks/useGet";
 import { cartProduct, product } from "./MainPage";
 import ProductCard from "./ProductCard";
@@ -7,12 +6,6 @@ import { ProductsEndPoint } from "./services/EndPoints";
 import { Toaster } from "./ui/toaster";
 
 const ENDPOINT = ProductsEndPoint;
-
-const schema = z.object({
-  quantity: z.number().min(1, { message: "最小数量为1" }),
-});
-
-type FormData = z.infer<typeof schema>;
 
 //ProductList的这四个参数分别用来控制1.购物车商品id。2.设置购物车商品id。3.购物车商品。4.添加购物车商品
 interface props {
