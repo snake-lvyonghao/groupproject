@@ -16,12 +16,12 @@ import io.seata.rm.tcc.api.TwoPhaseBusinessAction;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-import static com.comp5348.store.model.TransactionStatus.*;
+import static com.comp5348.store.model.Transaction.TransactionStatus.*;
 
 
 @Service

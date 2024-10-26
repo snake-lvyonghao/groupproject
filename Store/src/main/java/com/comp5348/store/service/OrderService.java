@@ -1,21 +1,26 @@
 package com.comp5348.store.service;
 
 
+import com.comp5348.Common.model.DeliveryStatus;
 import com.comp5348.store.dto.OrderDTO;
 import com.comp5348.store.model.*;
 import com.comp5348.store.repository.*;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import io.seata.rm.tcc.api.BusinessActionContext;
 import io.seata.rm.tcc.api.LocalTCC;
 import io.seata.spring.annotation.GlobalTransactional;
 import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import static com.comp5348.store.model.Order.OrderStatus.REFUNDABLE;
 
 @Service
 @LocalTCC
+@Slf4j
 public class OrderService {
 
     private final OrderRepository orderRepository;
@@ -23,14 +28,16 @@ public class OrderService {
     private final CustomerRepository customerRepository;
     private final WarehouseGoodsService warehouseGoodsService;
     private final BankService bankService;
+    private final NotificationService notificationService;
 
     @Autowired
-    public OrderService(OrderRepository orderRepository, GoodsRepository goodsRepository, CustomerRepository customerRepository, WarehouseGoodsService warehouseGoodsService, BankService bankService) {
+    public OrderService(OrderRepository orderRepository, GoodsRepository goodsRepository, CustomerRepository customerRepository, WarehouseGoodsService warehouseGoodsService, BankService bankService, NotificationService notificationService) {
         this.orderRepository = orderRepository;
         this.goodsRepository = goodsRepository;
         this.customerRepository = customerRepository;
         this.warehouseGoodsService = warehouseGoodsService;
         this.bankService = bankService;
+        this.notificationService = notificationService;
     }
 
     @GlobalTransactional
@@ -57,6 +64,7 @@ public class OrderService {
         order.setCustomer(customer);
         order.setTotalQuantity(quantity);
         order.setTotalPrice(totalPrice);
+        order.setStatus(REFUNDABLE);
 
         // 保存订单到数据库
         order = orderRepository.save(order);
@@ -77,7 +85,12 @@ public class OrderService {
             throw new RuntimeException("Payment freezing failed.");
         }
 
-        //TODO 通知DeliveryCO取货
+        // 异步通知DeliveryCO取货
+        try {
+            notificationService.sendDeliveryRequest(orderDTO);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to send delivery request for orderId: {}. Error: {}", order.getId(), e.getMessage());
+        }
 
         return new OrderDTO(order, true);
     }
@@ -97,7 +110,7 @@ public class OrderService {
         // 获取上下文对象
         BusinessActionContext actionContext = new BusinessActionContext();
 
-        // 1. 回滚冻结的库存
+        // 1. 回滚冻结的库存并设置订单状态为退单
         boolean stockUnfrozen = warehouseGoodsService.cancelOrder(actionContext, orderId);
         if (!stockUnfrozen) {
             throw new RuntimeException("Stock return failed.");
@@ -109,26 +122,17 @@ public class OrderService {
         if (!refundSuccess) {
             throw new RuntimeException("Payment refund failed.");
         }
-
-        //TODO Email 通知客户
+        //设置order状态为已取消
+        setOrderStatus((orderId), Order.OrderStatus.CANCELED);
+        // 异步通知Email退款
+        try {
+            notificationService.sendEmail(orderDTO, DeliveryStatus.CANCELLED);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to send Email for cancel oreder request for orderId: {}. Error: {}", order.getId(), e.getMessage());
+        }
         return true;
     }
 
-
-
-    public OrderDTO getOrderById(Long orderId) {
-        // Retrieve the Order entity by its ID using the repository
-        Optional<Order> orderOptional = orderRepository.findById(orderId);
-
-        // If the order is found, convert it to an OrderDTO and return it
-        if (orderOptional.isPresent()) {
-            Order order = orderOptional.get();
-            return new OrderDTO(order, true); // Assuming you want related entities included
-        }
-
-        // If the order is not found, throw an exception or handle it as needed
-        throw new RuntimeException("Order not found with ID: " + orderId);
-    }
 
     //获取实体
     public Order getOrderEntity(Long orderId) {
@@ -155,4 +159,16 @@ public class OrderService {
                 .collect(Collectors.toList());
     }
 
+    //set order can't be canceled
+    public void setOrderStatus(Long orderId, Order.OrderStatus orderStatus) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found with ID: " + orderId));
+        order.setStatus(orderStatus);
+        orderRepository.save(order); // 保存更新后的订单状态到数据库
+    }
+
+    public List<OrderDTO> findRefundableOrdersByCustomerId(Long customerId) {
+        List<Order> orders = orderRepository.findByCustomerIdAndStatus(customerId, Order.OrderStatus.REFUNDABLE);
+        return orders.stream().map(order -> new OrderDTO(order,true)).toList();
+    }
 }
