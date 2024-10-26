@@ -2,6 +2,7 @@ import { Box, Grid, GridItem } from "@chakra-ui/react";
 import { useState } from "react";
 import Cart from "./Cart";
 import Navbar from "./Navbar";
+import OrderHistory from "./OrderHistory";
 import ProductList from "./ProductList";
 
 export interface product {
@@ -37,6 +38,8 @@ const MainPage = () => {
         Add={setCartProducts}
       />
     );
+  } else if (main == "OrderHistory") {
+    mainAreaComponent = <OrderHistory />;
   } else {
     mainAreaComponent = (
       <Cart cartProducts={cartProducts} Remove={setCartProducts} />

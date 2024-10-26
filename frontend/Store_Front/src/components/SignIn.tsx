@@ -27,6 +27,8 @@ const SignIn = () => {
   const [status, setStatus] = useState(0);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  //这个email是用来跳转页面用的
   const [email, setEmail] = useState("");
 
   //navigate
