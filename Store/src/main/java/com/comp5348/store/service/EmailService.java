@@ -2,6 +2,7 @@ package com.comp5348.store.service;
 
 import com.comp5348.Common.config.MessagingConfig;
 import com.comp5348.Common.dto.EmailRequestDTO;
+import com.comp5348.Common.model.DeliveryStatus;
 import com.comp5348.store.dto.OrderDTO;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,12 +19,12 @@ public class EmailService {
         this.rabbitTemplate = rabbitTemplate;
     }
 
-    public void sendEmailRequest(OrderDTO orderDTO, int status) throws JsonProcessingException {
+    public void sendEmailRequest(OrderDTO orderDTO, DeliveryStatus status) throws JsonProcessingException {
         // 构建 DeliveryRequestDTO
         EmailRequestDTO emailRequestDTO = new EmailRequestDTO();
         emailRequestDTO.setCustomerEmail(orderDTO.getCustomer().getEmail());
         emailRequestDTO.setCustomerName(orderDTO.getCustomer().getName());
-        emailRequestDTO.setDeliveryStatus(status);
+        emailRequestDTO.setStatus(status);
 
 
         ObjectMapper mapper = new ObjectMapper();

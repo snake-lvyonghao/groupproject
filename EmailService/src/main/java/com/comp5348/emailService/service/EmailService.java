@@ -1,8 +1,8 @@
 package com.comp5348.emailService.service;
 
-import com.comp5348.Common.config.DeliveryStatus;
 import com.comp5348.Common.config.MessagingConfig;
 import com.comp5348.Common.dto.EmailRequestDTO;
+import com.comp5348.Common.model.DeliveryStatus;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.rpc.context.AttributeContext;
@@ -34,8 +34,33 @@ public class EmailService
     public void sendEmail(EmailRequestDTO requestDTO)
     {
         logger.info("Send email to address: " + requestDTO.getCustomerEmail());
-        String context = "Email: " + requestDTO.getCustomerName() + ", " +
-                DeliveryStatus.getMsgFromCode(requestDTO.getDeliveryStatus());
+        String context = "Email: " + requestDTO.getCustomerName() + ", ";
+        if(requestDTO.getStatus() == DeliveryStatus.DELIVERED)
+        {
+            context += "delivered";
+        }
+
+        if(requestDTO.getStatus() == DeliveryStatus.PREPARING)
+        {
+            context += "preparing";
+        }
+
+        if(requestDTO.getStatus() == DeliveryStatus.REQUEST_RECEIVED)
+        {
+            context += "received";
+        }
+
+        if(requestDTO.getStatus() == DeliveryStatus.LOST)
+        {
+            context += "Lost";
+        }
+
+        if(requestDTO.getStatus() == DeliveryStatus.SHIPPED)
+        {
+            context += "shipped";
+        }
+
+
         logger.info("Email context: " + context);
 
     }

@@ -24,4 +24,5 @@ public class MessagingConfig {
 
     @Bean
     public Queue emailQueue() {return new Queue(EMAIL_QUEUE, true); }
+
 }

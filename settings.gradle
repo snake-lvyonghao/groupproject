@@ -1,5 +1,5 @@
 rootProject.name = 'Groupproject'
-include 'Bank', 'DeliveryCo', 'EmailService', 'Store'
-include 'Common'
+include 'Bank', 'DeliveryCo', 'EmailService', 'Store','Common'
+
 
 

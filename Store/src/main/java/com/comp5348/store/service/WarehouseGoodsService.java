@@ -1,6 +1,5 @@
 package com.comp5348.store.service;
 
-import com.comp5348.store.dto.OrderDTO;
 import com.comp5348.store.dto.WarehouseGoodsDTO;
 import com.comp5348.store.model.*;
 import com.comp5348.store.repository.*;
@@ -80,6 +79,9 @@ public class WarehouseGoodsService {
                 return false;
             }
             int availableQuantity = warehouseGoods.getQuantity();
+            if (availableQuantity <= 0) {
+                continue;
+            }
             int allocatedQuantity = Math.min(remainingQuantity, availableQuantity);
             log.info("Allocated {} items of goods {} from warehouse {}", allocatedQuantity, goodsId, warehouseGoods.getWarehouse().getId());
             // 创建 OrderWarehouse 对象
@@ -96,7 +98,6 @@ public class WarehouseGoodsService {
 
             // 更新剩余数量
             remainingQuantity -= allocatedQuantity;
-
 
         }
 
@@ -118,7 +119,7 @@ public class WarehouseGoodsService {
         Integer orderId = (Integer) context.getActionContext("orderId");
         Order order = orderRepository.findById(Long.valueOf(orderId)).orElseThrow(() -> new RuntimeException("Order not found"));
 
-        //退货到 OrderWarehouse
+        //退货到 WarehouseGoods 并删除orderwarehouse
         orderWarehouseRepository.findByOrder(order)
                 .forEach(orderWarehouse -> {
                     // 调整库存，退回商品数量
@@ -130,23 +131,64 @@ public class WarehouseGoodsService {
                     // 删除 OrderWarehouse 记录
                     orderWarehouseRepository.delete(orderWarehouse);
                 });
+        orderRepository.delete(order);
         return true;
     }
 
+    @TwoPhaseBusinessAction(name = "cancelOrder", commitMethod = "confirmRollbackFreezeStock", rollbackMethod = "cancelRollbackFreezeStock")
+    public boolean cancelOrder(BusinessActionContext context,Long orderId) {
+        Order order = orderRepository.findById(Long.valueOf(orderId)).orElseThrow(() -> new RuntimeException("Order not found"));
+        context.addActionContext("orderId", orderId);
+        orderWarehouseRepository.findByOrder(order)
+                .forEach(orderWarehouse -> {
+                    // 调整库存，退回商品数量
+                    adjustGoodsQuantity(
+                            orderWarehouse.getWarehouseGoods(),
+                            orderWarehouse.getQuantity(),
+                            true
+                    );
+                });
+        return true;
+    }
 
-    public boolean adjustGoodsQuantity(WarehouseGoods warehouseGoods, int quantity, boolean increase) {
-        // 如果是增加库存，直接增加数量，否则减少数量
+    public boolean confirmRollbackFreezeStock(BusinessActionContext context) {
+        // 在 confirm 阶段，删除订单及其相关内容
+        Integer orderId = (Integer) context.getActionContext("orderId");
+        Order order = orderRepository.findById(Long.valueOf(orderId)).orElseThrow(() -> new RuntimeException("Order not found"));
+        // Delete orderWarhouse
+        orderWarehouseRepository.deleteAll(orderWarehouseRepository.findByOrder(order));
+        orderRepository.delete(order);
+        return true;
+    }
+
+    public boolean cancelRollbackFreezeStock(BusinessActionContext context) {
+        //业务失败 减少库存
+        Integer orderId = (Integer) context.getActionContext("orderId");
+        Order order = orderRepository.findById(Long.valueOf(orderId)).orElseThrow(() -> new RuntimeException("Order not found"));
+        orderWarehouseRepository.findByOrder(order)
+                .forEach(orderWarehouse -> {
+                    // 调整库存，退回商品数量
+                    adjustGoodsQuantity(
+                            orderWarehouse.getWarehouseGoods(),
+                            orderWarehouse.getQuantity(),
+                            false
+                    );
+                });
+        return true;
+    }
+
+    public void adjustGoodsQuantity(WarehouseGoods warehouseGoods, int quantity, boolean increase) {
+        // True 增加库存 False 减少库存
         int newQuantity = increase ? warehouseGoods.getQuantity() + quantity : warehouseGoods.getQuantity() - quantity;
 
         // 检查库存是否不足
         if (newQuantity < 0) {
-            return false;
+            return;
         }
 
         // 更新库存数量
         warehouseGoods.setQuantity(newQuantity);
         warehouseGoodsRepository.save(warehouseGoods);
-        return true;
     }
 
 

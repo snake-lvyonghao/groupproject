@@ -3,6 +3,7 @@ package com.comp5348.store;
 import com.comp5348.Common.config.DeliveryStatus;
 import com.comp5348.Common.dto.DeliveryRequestDTO;
 import com.comp5348.Common.dto.EmailRequestDTO;
+import com.comp5348.Common.model.DeliveryStatus;
 import com.comp5348.store.dto.*;
 import com.comp5348.store.model.Customer;
 import com.comp5348.store.model.Goods;
@@ -91,7 +92,7 @@ public class EmailServiceTest {
         orderDTO.setCustomer(customerDTO);
 
         // 调用被测试方法
-        emailService.sendEmailRequest(orderDTO, DeliveryStatus.FETCHED.getCode());
+        emailService.sendEmailRequest(orderDTO, DeliveryStatus.DELIVERED);
 
         // 捕获发送给 RabbitMQ 的消息
         ArgumentCaptor<String> jsonCaptor = ArgumentCaptor.forClass(String.class);
@@ -103,6 +104,6 @@ public class EmailServiceTest {
 // 对消息内容进行断言验证
         assertEquals(orderDTO.getCustomer().getName(), capturedRequest.getCustomerName());
         assertEquals(orderDTO.getCustomer().getEmail(), capturedRequest.getCustomerEmail());
-        assertEquals(DeliveryStatus.FETCHED.getCode(), capturedRequest.getDeliveryStatus());
+        assertEquals(DeliveryStatus.DELIVERED, capturedRequest.getStatus());
     }
 }

@@ -40,6 +40,7 @@ public class BankService {
 
     @TwoPhaseBusinessAction(name = "prepareBankTransaction", commitMethod = "commitTransaction", rollbackMethod = "rollbackTransaction")
     public boolean prepareTransaction(BusinessActionContext context, OrderDTO order, boolean isRefund) {
+        //isRefund True 退款 False 付款
         String fromAccount = isRefund ? "Store" : order.getCustomer().getName();
         String toAccount = isRefund ? order.getCustomer().getName() : "Store";
 

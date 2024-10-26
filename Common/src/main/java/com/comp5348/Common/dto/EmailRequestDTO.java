@@ -1,5 +1,6 @@
 package com.comp5348.Common.dto;
 
+import com.comp5348.Common.model.DeliveryStatus;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
@@ -17,5 +18,5 @@ import java.util.List;
 public class EmailRequestDTO {
     private String customerName;
     private String customerEmail;
-    private int DeliveryStatus;
+    private DeliveryStatus status;
 }
