@@ -3,6 +3,7 @@ package com.comp5348.store.service;
 
 import com.comp5348.Common.model.DeliveryStatus;
 import com.comp5348.store.dto.OrderDTO;
+import com.comp5348.store.exception.OrderRefundException;
 import com.comp5348.store.model.*;
 import com.comp5348.store.repository.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -16,6 +17,8 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import static com.comp5348.store.model.Order.OrderStatus.NON_REFUNDABLE;
 import static com.comp5348.store.model.Order.OrderStatus.REFUNDABLE;
 
 @Service
@@ -106,7 +109,14 @@ public class OrderService {
         }
 
         Order order = orderOptional.get();
-
+        switch (order.getStatus()) {
+            case CANCELED:
+            case NON_REFUNDABLE:
+                log.error(String.valueOf(order.getStatus() + "Order Can't be refunded."));
+                throw new OrderRefundException("Order Can't be refunded.");
+            default:
+                break;
+        }
         // 获取上下文对象
         BusinessActionContext actionContext = new BusinessActionContext();
 

@@ -37,6 +37,45 @@ public class DeliveryService {
         this.orderRepository = orderRepository;
     }
 
+    //监听10秒之后的队列
+    @RabbitListener(queues = PACK_QUEUE)
+    public void processDeliveryQueue(String message) {
+        try {
+            log.info("PACK_QUEUE");
+            DeliveryRequestDTO requestDTO = mapper.readValue(message, DeliveryRequestDTO.class);
+            Optional<Order> orderOptional = orderRepository.findById(requestDTO.getOrderId());
+
+            if (orderOptional.isEmpty()) {
+                log.info("订单 {} 未找到，跳过交付请求。", requestDTO.getOrderId());
+                return;
+            }
+
+            Order order = orderOptional.get();
+
+            // 在继续之前执行最终的状态检查
+            switch (order.getStatus()) {
+                case CANCELED:
+                case NON_REFUNDABLE:
+                    log.info("订单 {} 已被取消或不可退款，跳过交付请求。", order.getId());
+                    return;
+                default:
+                    break;
+            }
+
+
+            ObjectMapper mapper = new ObjectMapper();
+            // 序列化为 JSON 字符串
+            String jsonMessage = mapper.writeValueAsString(requestDTO);
+
+            // 转发给交付服务，因为订单未被取消或不可退款
+            order.setStatus(NON_REFUNDABLE);
+            orderRepository.save(order);
+            log.info("订单已发送不可撤销 {}", requestDTO.getOrderId());
+            rabbitTemplate.convertAndSend(DELIVERY_QUEUE, jsonMessage);
+        } catch (Exception e) {
+            log.error("An error occurred processing the delivery queue：", e);
+        }
+    }
     @Async
     public void sendDeliveryRequest(OrderDTO orderDTO) throws JsonProcessingException {
         // 构建 DeliveryRequestDTO
@@ -55,43 +94,10 @@ public class DeliveryService {
 
     private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
-    //监听10秒之后的队列
-    @RabbitListener(queues = PACK_QUEUE)
-    public void processDeliveryQueue(String message) {
-        try {
-            DeliveryRequestDTO requestDTO = mapper.readValue(message, DeliveryRequestDTO.class);
-            Optional<Order> orderOptional = orderRepository.findById(requestDTO.getOrderId());
-
-            if (orderOptional.isEmpty()) {
-                log.info("订单 {} 未找到，跳过交付请求。", requestDTO.getOrderId());
-                return;
-            }
-
-            Order order = orderOptional.get();
-
-            // 在继续之前执行最终的状态检查
-            if (order.getStatus() == Order.OrderStatus.CANCELED || order.getStatus() == NON_REFUNDABLE) {
-                log.info("订单 {} 已被取消或不可退款，跳过交付请求。", order.getId());
-                return;
-            }
-
-            ObjectMapper mapper = new ObjectMapper();
-            // 序列化为 JSON 字符串
-            String jsonMessage = mapper.writeValueAsString(requestDTO);
-
-            // 转发给交付服务，因为订单未被取消或不可退款
-            order.setStatus(NON_REFUNDABLE);
-            orderRepository.save(order);
-            log.info("订单 {} 设置为不可退款", order.getId());
-            rabbitTemplate.convertAndSend(DELIVERY_QUEUE, jsonMessage);
-        } catch (Exception e) {
-            log.error("An error occurred processing the delivery queue：", e);
-        }
-    }
-
     @RabbitListener(queues = DELIVERR_RESPONSE_QUEUE)
     public void receiveDeliveryResponse(String message) {
         try {
+            log.info("DELIVERR_RESPONSE_QUEUE");
             // 反序列化 JSON 为 DeliveryResponseDTO
             DeliveryResponseDTO responseDTO = mapper.readValue(message, DeliveryResponseDTO.class);
             Long orderId = responseDTO.getOrderId();
@@ -104,13 +110,6 @@ public class DeliveryService {
             }
 
             Order order = orderOptional.get();
-
-            if (deliveryStatus == DeliveryStatus.REQUEST_RECEIVED) {
-                order.setStatus(NON_REFUNDABLE);
-                orderRepository.save(order);
-            } else {
-                log.info("The order: {} is {}", orderId, deliveryStatus);
-            }
 
             // 获取订单信息并发送电子邮件通知
             OrderDTO orderDTO = new OrderDTO(order, true);

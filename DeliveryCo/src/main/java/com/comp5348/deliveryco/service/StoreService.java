@@ -17,11 +17,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
+import static com.comp5348.Common.config.MessagingConfig.DELIVERR_RESPONSE_QUEUE;
+import static com.comp5348.Common.config.MessagingConfig.DELIVERY_QUEUE;
+
 @Service
 @Slf4j
 public class StoreService {
     private final RabbitTemplate rabbitTemplate;
-    private final static String Response_QUEUE = "delivery.response.queue";
 
     @Autowired
     public StoreService(RabbitTemplate rabbitTemplate) {
@@ -39,8 +41,7 @@ public class StoreService {
         String jsonMessage = mapper.writeValueAsString(deliveryResponseDTO);
 
         // 发送 JSON 到 RabbitMQ 队列
-        rabbitTemplate.convertAndSend(Response_QUEUE, jsonMessage);
-
+        rabbitTemplate.convertAndSend(DELIVERR_RESPONSE_QUEUE, jsonMessage);
     }
 
     @Async
@@ -54,12 +55,15 @@ public class StoreService {
 
         // 用四次 loop 判断快递的状态，每次延迟 3 秒。
         for (int i = 0; i < 4; i++) {
-            DeliveryStatus status = statusMap.getOrDefault(i, DeliveryStatus.DELIVERED);
-
             // 每次循环 5% 的概率丢件，4 次总共 20%
             if (random.nextInt(100) < 5) {
-                status = DeliveryStatus.LOST;
+                DeliveryStatus status = DeliveryStatus.LOST;
+                log.info("订单 {} 已丢失，停止后续处理。", deliveryRequestDTO.getOrderId());
+                sendResponseToStore(deliveryRequestDTO.getOrderId(), status);
+                return;
             }
+
+            DeliveryStatus status = statusMap.getOrDefault(i, DeliveryStatus.DELIVERED);
 
             // 日志记录状态更新
             log.info("订单 {} 的当前状态为：{}", deliveryRequestDTO.getOrderId(), status);
@@ -72,7 +76,7 @@ public class StoreService {
         }
     }
 
-    @RabbitListener(queues = "delivery.request.queue")
+    @RabbitListener(queues = DELIVERY_QUEUE)
     public void receiveDeliveryRequest(String message) {
         try {
             // 反序列化 JSON 为 DeliveryRequestDTO

@@ -1,6 +1,7 @@
 package com.comp5348.store.controller;
 
 import com.comp5348.store.dto.OrderDTO;
+import com.comp5348.store.exception.OrderRefundException;
 import com.comp5348.store.service.OrderService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,23 +31,44 @@ public class OrderController {
         OrderDTO orderDTO = orderService.createOrder(request.goodsId, request.customerId, request.quantity);
         return ResponseEntity.ok(orderDTO);
     }
+
     @PostMapping("/refund")
     public ResponseEntity<String> refundOrder(@RequestBody RefundOrderRequest request) {
         Long orderId = request.orderId;
-        log.info("Received request to refund order for orderId: {}", request.orderId);
+        log.info("Received request to refund order for orderId: {}", orderId);
 
         if (orderId == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Order ID cannot be null.");
         }
 
-        boolean refundSuccessful = orderService.cancelOrder(orderId);
+        try {
+            boolean refundSuccessful = orderService.cancelOrder(orderId);
 
-        if (refundSuccessful) {
-            return ResponseEntity.ok("Refund successful for order ID: " + orderId);
-        } else {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Refund failed for order ID: " + orderId);
+            if (refundSuccessful) {
+                return ResponseEntity.ok("Refund successful for order ID: " + orderId);
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Refund failed for order ID: " + orderId);
+            }
+        } catch (Exception e) {
+            // 检查是否是由 IllegalArgumentException 引发的异常
+            if (e.getCause() instanceof IllegalArgumentException) {
+                String message = e.getCause().getMessage();
+                log.error("Refund failed: {}", message);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(message);
+            }
+
+            // 捕获自定义的业务异常
+            if (e instanceof OrderRefundException) {
+                log.error("Refund failed: {}", e.getMessage());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+            }
+
+            log.error("Unexpected error during refund: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred.");
         }
     }
+
+
 
     @GetMapping("/{customerId}")
     public ResponseEntity<List<OrderDTO>> getRefundableOrdersByCustomerId(@PathVariable Long customerId) {

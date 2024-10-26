@@ -26,16 +26,15 @@ public class MessagingConfig {
     }
 
     @Bean
-    public Queue emailResponseQueue(){
+    public Queue deliverrResponseQueue() {
         return new Queue(DELIVERR_RESPONSE_QUEUE, true);
     }
 
     @Bean
-    public Queue emailQueue() {return new Queue(EMAIL_QUEUE, true); }
-
+    public Queue emailQueue() { return new Queue(EMAIL_QUEUE, true); }
 
     @Bean
-    public Queue Queue() {return new Queue(PACK_QUEUE, true); }
+    public Queue packQueue() { return new Queue(PACK_QUEUE, true); }
 
     @Bean
     public Queue delayQueue() {
@@ -59,10 +58,9 @@ public class MessagingConfig {
         return new DirectExchange("direct-exchange");
     }
 
-    // 绑定实际处理队列到交换器
+    // 绑定 Pack 队列到交换器
     @Bean
-    public Binding bindDeliveryQueue(Queue deliveryQueue, DirectExchange directExchange) {
-        return BindingBuilder.bind(deliveryQueue).to(directExchange).with(PACK_QUEUE);
+    public Binding bindPackQueue(Queue packQueue, DirectExchange directExchange) {
+        return BindingBuilder.bind(packQueue).to(directExchange).with(PACK_QUEUE);
     }
-
 }
