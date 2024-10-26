@@ -1,8 +1,10 @@
 plugins {
+    id 'org.springframework.boot' version '3.3.4'
+    id 'io.spring.dependency-management' version '1.1.6'
     id 'java'
 }
 
-group = 'com.example'
+group = 'com.comp5348.Groupproject'
 version = '0.0.1-SNAPSHOT'
 
 repositories {
@@ -10,10 +12,6 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
     // 如果有特有的依赖在此添加，例如:
     // implementation 'com.some.library:some-library:1.0'

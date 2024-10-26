@@ -3,7 +3,8 @@ import com.comp5348.store.model.Order;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Getter;
 import lombok.Setter;
-import java.util.List;
+
+import java.util.Date;
 
 @Getter
 @Setter
@@ -14,6 +15,8 @@ public class OrderDTO {
     private CustomerDTO customer;  // 客户信息
     private int totalQuantity;  // 商品的总数量
     private double totalPrice;  // 总价格
+    private Order.OrderStatus orderStatus;
+    private Date orderDate;
 
     /**
      * Constructs an OrderDTO from an Order entity.
@@ -25,6 +28,8 @@ public class OrderDTO {
         this.id = orderEntity.getId();
         this.totalQuantity = orderEntity.getTotalQuantity();
         this.totalPrice = orderEntity.getTotalPrice();
+        this.orderStatus = orderEntity.getStatus();
+        this.orderDate = orderEntity.getDate();
 
         if (includeRelatedEntities) {
             this.goods = new GoodsDTO(orderEntity.getGoods());

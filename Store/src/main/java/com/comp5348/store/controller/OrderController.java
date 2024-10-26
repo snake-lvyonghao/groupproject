@@ -8,6 +8,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @Slf4j
 @RequestMapping("/api/orders")
@@ -44,6 +46,13 @@ public class OrderController {
         } else {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Refund failed for order ID: " + orderId);
         }
+    }
+
+    @GetMapping("/{customerId}")
+    public ResponseEntity<List<OrderDTO>> getRefundableOrdersByCustomerId(@PathVariable Long customerId) {
+        log.info("Received request to get refundable orders for customerId: {}", customerId);
+        List<OrderDTO> refundableOrders = orderService.findRefundableOrdersByCustomerId(customerId);
+        return ResponseEntity.ok(refundableOrders);
     }
 
     public static class CreateOrderRequest {

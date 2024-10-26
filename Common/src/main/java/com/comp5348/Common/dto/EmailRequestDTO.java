@@ -16,7 +16,9 @@ import java.util.List;
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class EmailRequestDTO {
+    @JsonProperty("customer_name")
     private String customerName;
+    @JsonProperty("customer_email")
     private String customerEmail;
     private DeliveryStatus status;
 }

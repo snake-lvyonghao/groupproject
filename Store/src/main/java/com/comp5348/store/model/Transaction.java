@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.Date;
+
 @Getter @Setter
 @Entity
 public class Transaction {
@@ -16,4 +18,20 @@ public class Transaction {
     private String toAccount;
     private double amount;
     private TransactionStatus status;
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(nullable = false, updatable = false)
+    private Date date;
+
+    @PrePersist
+    protected void onCreate() {
+        date = new Date();
+    }
+
+    public enum TransactionStatus {
+        OPEN,
+        COMMITTED,
+        SUCCESS,
+        FAILED
+    }
+
 }

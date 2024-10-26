@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -19,13 +20,13 @@ public class EmailService {
         this.rabbitTemplate = rabbitTemplate;
     }
 
+    @Async
     public void sendEmailRequest(OrderDTO orderDTO, DeliveryStatus status) throws JsonProcessingException {
         // 构建 DeliveryRequestDTO
         EmailRequestDTO emailRequestDTO = new EmailRequestDTO();
         emailRequestDTO.setCustomerEmail(orderDTO.getCustomer().getEmail());
         emailRequestDTO.setCustomerName(orderDTO.getCustomer().getName());
         emailRequestDTO.setStatus(status);
-
 
         ObjectMapper mapper = new ObjectMapper();
 
