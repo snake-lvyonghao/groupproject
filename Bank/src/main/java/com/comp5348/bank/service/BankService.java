@@ -12,6 +12,10 @@ import net.devh.boot.grpc.server.service.GrpcService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
 @GrpcService
 @Service
 @Slf4j
@@ -19,6 +23,7 @@ public class BankService extends BankServiceGrpc.BankServiceImplBase {
 
     private final AccountRepository accountRepository;
     private final TransactionRecordRepository transactionRecordRepository;
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     public BankService(AccountRepository accountRepository, TransactionRecordRepository transactionRecordRepository) {
         this.accountRepository = accountRepository;
@@ -28,6 +33,14 @@ public class BankService extends BankServiceGrpc.BankServiceImplBase {
     @Override
     @Transactional
     public void prepare(PrepareRequest request, StreamObserver<PrepareResponse> responseObserver) {
+        // 添加5秒延迟
+        try {
+            Thread.sleep(5000); // 延迟5秒
+        } catch (InterruptedException e) {
+            log.error("Error during delay", e);
+            responseObserver.onError(e);
+            return;
+        }
         Account fromAccount = accountRepository.findByAccountOwner(request.getFromAccount());
         Account toAccount = accountRepository.findByAccountOwner(request.getToAccount());
 
@@ -51,15 +64,37 @@ public class BankService extends BankServiceGrpc.BankServiceImplBase {
             accountRepository.save(fromAccount);
 
             responseObserver.onNext(PrepareResponse.newBuilder().setSuccess(true).build());
+            responseObserver.onCompleted();
+
+            // 设置超时任务，在5秒后检查是否需要回滚
+            scheduler.schedule(() -> {
+                TransactionRecord pendingTransaction = transactionRecordRepository.findById(request.getTransactionId()).orElse(null);
+                if (pendingTransaction.getStatus() == TransactionStatus.PENDING) {
+                    log.info("Rolling back transaction due to timeout: {}", request.getTransactionId());
+                    rollback(RollbackRequest.newBuilder().setTransactionId(request.getTransactionId()).build(), new StreamObserver<RollbackResponse>() {
+                        @Override
+                        public void onNext(RollbackResponse value) {
+                            log.info("Rollback response received for transactionId: {}", request.getTransactionId());
+                        }
+                        @Override
+                        public void onError(Throwable t) {
+                            log.error("Error during rollback for transactionId: {}", request.getTransactionId(), t);
+                        }
+                        @Override
+                        public void onCompleted() {
+                            log.info("Rollback completed for transactionId: {}", request.getTransactionId());
+                        }
+                    });
+                }
+            }, 5, TimeUnit.SECONDS);
+
         } else {
             transactionRecord.setStatus(TransactionStatus.FAILURE);
             transactionRecordRepository.save(transactionRecord);
             responseObserver.onNext(PrepareResponse.newBuilder().setSuccess(false).build());
+            responseObserver.onCompleted();
         }
-
-        responseObserver.onCompleted();
     }
-
     @Override
     @Transactional
     public void commit(CommitRequest request, StreamObserver<CommitResponse> responseObserver) {
