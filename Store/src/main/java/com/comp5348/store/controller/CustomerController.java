@@ -1,5 +1,6 @@
 package com.comp5348.store.controller;
 
+import com.comp5348.store.dto.CustomerDTO;
 import com.comp5348.store.service.CustomerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -14,12 +15,34 @@ public class CustomerController {
     private CustomerService customerService;
 
     @PostMapping
-    public ResponseEntity<String> login(@RequestParam String username, @RequestParam String password) {
-        boolean isAuthenticated = customerService.authenticateCustomer(username, password);
+    public ResponseEntity<String> login(@RequestBody LoginRequest loginRequest) {
+        boolean isAuthenticated = customerService.authenticateCustomer(loginRequest.email, loginRequest.password);
         if (isAuthenticated) {
             return ResponseEntity.ok("Login successful");
         } else {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
         }
+    }
+    @PostMapping("/signup")
+    public ResponseEntity<String> register(@RequestBody  SignUpRequest signUpRequest) {
+        CustomerDTO newCustomer= customerService.registerCustomer(signUpRequest.Username, signUpRequest.Password,signUpRequest.EmailAddress);
+        if(newCustomer.getEmail()!=null&&newCustomer.getEmail().equals(signUpRequest.EmailAddress) ){
+            return ResponseEntity.ok("signUp successful");
+        }else {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("register failed");
+        }
+
+    }
+
+     public static  class LoginRequest {
+         public String email;
+         public String password;
+    }
+
+     public static class SignUpRequest {
+         public String Username;
+         public String EmailAddress;
+         public String Password;
+
     }
 }
