@@ -5,83 +5,88 @@ import com.comp5348.Common.model.DeliveryStatus;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
 @Service
+@Slf4j
 public class StoreService {
-//    private final RabbitTemplate rabbitTemplate;
-//    private final static String Response_QUEUE = "delivery.response.queue";
-//
-//    @Autowired
-//    public StoreService(RabbitTemplate rabbitTemplate) {
-//        this.rabbitTemplate = rabbitTemplate;
-//    }
-//
-//    private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
-//
-//    public void sendResponseToStore(Long orderId,DeliveryStatus status) throws JsonProcessingException {
-//        DeliveryResponseDTO deliveryResponseDTO = new DeliveryResponseDTO();
-//        deliveryResponseDTO.setOrderId(orderId);
-//        deliveryResponseDTO.setDeliveryStatus(status);
-//
-//        // 序列化为 JSON 字符串
-//        String jsonMessage = mapper.writeValueAsString(deliveryResponseDTO);
-//
-//        // 发送 JSON 到 RabbitMQ 队列
-//        rabbitTemplate.convertAndSend(Response_QUEUE, jsonMessage);
-//
-//
-//
-//    }
-//
-//    @Async
-//    public void requestProcesser(DeliveryRequestDTO deliveryRequestDTO) throws JsonProcessingException, InterruptedException {
-//        DeliveryStatus status;
-//
-//        Random random = new Random();
-//        //用四次loop判断快递的状态，每次延迟3秒。
-//        for(int i=0;i<4;i++){
-//            if (i==0){status=DeliveryStatus.REQUEST_RECEIVED;}
-//            else if (i==1) {status=DeliveryStatus.PREPARING;}
-//            else if (i==2) {status=DeliveryStatus.SHIPPED;}
-//            else {status=DeliveryStatus.DELIVERED;}
-//
-//            //每次循环5%的概率丢件，4次总共20%
-//            int randomInt = random.nextInt(100);
-//            if(randomInt<5){ status=DeliveryStatus.LOST; }
-//
-//
-//            //每次状态变更延迟三秒钟.
-//            Thread.sleep(3000);
-//
-//            //调用sendResponseToStore向Store发送message.
-//            sendResponseToStore(deliveryRequestDTO.getOrderId(),status);
-//
-//
-//        }
-//    }
-//
-//    @RabbitListener(queues = "delivery.request.queue")
-//    public void receiveDeliveryRequest(String message) {
-//        try {
-//            // 反序列化 JSON 为 DeliveryRequestDTO
-//            DeliveryRequestDTO requestDTO = mapper.readValue(message, DeliveryRequestDTO.class);
-//            System.out.println("Received delivery request: " + requestDTO);
-//
-//            // 这里进行相应的业务处理逻辑，例如更新状态、通知仓库等
-//            requestProcesser(requestDTO);
-//
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//    }
-//
-//
+    private final RabbitTemplate rabbitTemplate;
+    private final static String Response_QUEUE = "delivery.response.queue";
+
+    @Autowired
+    public StoreService(RabbitTemplate rabbitTemplate) {
+        this.rabbitTemplate = rabbitTemplate;
+    }
+
+    private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
+
+    public void sendResponseToStore(Long orderId,DeliveryStatus status) throws JsonProcessingException {
+        DeliveryResponseDTO deliveryResponseDTO = new DeliveryResponseDTO();
+        deliveryResponseDTO.setOrderId(orderId);
+        deliveryResponseDTO.setDeliveryStatus(status);
+
+        // 序列化为 JSON 字符串
+        String jsonMessage = mapper.writeValueAsString(deliveryResponseDTO);
+
+        // 发送 JSON 到 RabbitMQ 队列
+        rabbitTemplate.convertAndSend(Response_QUEUE, jsonMessage);
+
+    }
+
+    @Async
+    public void requestProcesser(DeliveryRequestDTO deliveryRequestDTO) throws JsonProcessingException, InterruptedException {
+        Random random = new Random();
+        Map<Integer, DeliveryStatus> statusMap = new HashMap<>();
+        statusMap.put(0, DeliveryStatus.REQUEST_RECEIVED);
+        statusMap.put(1, DeliveryStatus.PREPARED);
+        statusMap.put(2, DeliveryStatus.SHIPPED);
+        statusMap.put(3, DeliveryStatus.DELIVERED);
+
+        // 用四次 loop 判断快递的状态，每次延迟 3 秒。
+        for (int i = 0; i < 4; i++) {
+            DeliveryStatus status = statusMap.getOrDefault(i, DeliveryStatus.DELIVERED);
+
+            // 每次循环 5% 的概率丢件，4 次总共 20%
+            if (random.nextInt(100) < 5) {
+                status = DeliveryStatus.LOST;
+            }
+
+            // 日志记录状态更新
+            log.info("订单 {} 的当前状态为：{}", deliveryRequestDTO.getOrderId(), status);
+
+            // 每次状态变更延迟三秒钟。
+            Thread.sleep(3000);
+
+            // 调用 sendResponseToStore 向 Store 发送 message。
+            sendResponseToStore(deliveryRequestDTO.getOrderId(), status);
+        }
+    }
+
+    @RabbitListener(queues = "delivery.request.queue")
+    public void receiveDeliveryRequest(String message) {
+        try {
+            // 反序列化 JSON 为 DeliveryRequestDTO
+            DeliveryRequestDTO requestDTO = mapper.readValue(message, DeliveryRequestDTO.class);
+            System.out.println("Received delivery request: " + requestDTO.getOrderId());
+
+            // 这里进行相应的业务处理逻辑，例如更新状态、通知仓库等
+            requestProcesser(requestDTO);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
 
 }

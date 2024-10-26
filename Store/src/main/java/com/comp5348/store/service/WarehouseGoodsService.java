@@ -137,7 +137,7 @@ public class WarehouseGoodsService {
 
     @TwoPhaseBusinessAction(name = "cancelOrder", commitMethod = "confirmRollbackFreezeStock", rollbackMethod = "cancelRollbackFreezeStock")
     public boolean cancelOrder(BusinessActionContext context,Long orderId) {
-        Order order = orderRepository.findById(Long.valueOf(orderId)).orElseThrow(() -> new RuntimeException("Order not found"));
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
         context.addActionContext("orderId", orderId);
         orderWarehouseRepository.findByOrder(order)
                 .forEach(orderWarehouse -> {
@@ -157,7 +157,6 @@ public class WarehouseGoodsService {
         Order order = orderRepository.findById(Long.valueOf(orderId)).orElseThrow(() -> new RuntimeException("Order not found"));
         // Delete orderWarhouse
         orderWarehouseRepository.deleteAll(orderWarehouseRepository.findByOrder(order));
-        orderRepository.delete(order);
         return true;
     }
 

@@ -4,75 +4,122 @@ import com.comp5348.Common.dto.DeliveryRequestDTO;
 import com.comp5348.Common.dto.DeliveryResponseDTO;
 import com.comp5348.Common.model.DeliveryStatus;
 import com.comp5348.store.dto.OrderDTO;
+import com.comp5348.store.model.Order;
+import com.comp5348.store.repository.OrderRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
+import static com.comp5348.Common.config.MessagingConfig.*;
+import static com.comp5348.store.model.Order.OrderStatus.NON_REFUNDABLE;
+
+@Slf4j
 @Service
 public class DeliveryService {
     private final RabbitTemplate rabbitTemplate;
-    private final static String DELIVERY_QUEUE = "delivery.request.queue";
+    private final EmailService emailService;
+    private final OrderRepository orderRepository;
 
     @Autowired
-    public DeliveryService(RabbitTemplate rabbitTemplate) {
+    public DeliveryService(RabbitTemplate rabbitTemplate,
+                           EmailService emailService,
+                           OrderRepository orderRepository) {
         this.rabbitTemplate = rabbitTemplate;
+        this.emailService = emailService;
+        this.orderRepository = orderRepository;
     }
 
+    @Async
     public void sendDeliveryRequest(OrderDTO orderDTO) throws JsonProcessingException {
         // 构建 DeliveryRequestDTO
         DeliveryRequestDTO deliveryRequestDTO = new DeliveryRequestDTO();
         deliveryRequestDTO.setOrderId(orderDTO.getId());
 
         ObjectMapper mapper = new ObjectMapper();
-        // JavaTimeModule is registered to handle the serialization of LocalDateTime.
-
-        // 将 OrderDTO 的信息转换为 WarehouseInfo 列表
-//        List<DeliveryRequestDTO.WarehouseInfo> warehouseInfos = orderDTO.getOrderWarehouses().stream()
-//                .map(orderWarehouseDTO -> new DeliveryRequestDTO.WarehouseInfo(
-//                        orderWarehouseDTO.getWarehouseGoodsDTO().getWarehouse().getName(),
-//                        orderWarehouseDTO.getWarehouseGoodsDTO().getWarehouse().getLocation(),
-//                        orderWarehouseDTO.getWarehouseGoodsDTO().getGoods().getName(),
-//                        orderWarehouseDTO.getQuantity()
-//                ))
-//                .collect(Collectors.toList());
-//        deliveryRequestDTO.setWarehouseInfos(warehouseInfos);
 
         // 发送订单信息给DeliveryCo
         // 序列化为 JSON 字符串
         String jsonMessage = mapper.writeValueAsString(deliveryRequestDTO);
 
         // 发送 JSON 到 RabbitMQ 队列
-        rabbitTemplate.convertAndSend("delivery.request.queue", jsonMessage);
+        rabbitTemplate.convertAndSend(DELAY_QUEUE, jsonMessage);
     }
 
     private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
-    @RabbitListener(queues = "delivery.response.queue")
-    public void receiveDeliveryResponse(String message) {
+    //监听10秒之后的队列
+    @RabbitListener(queues = PACK_QUEUE)
+    public void processDeliveryQueue(String message) {
+        try {
+            DeliveryRequestDTO requestDTO = mapper.readValue(message, DeliveryRequestDTO.class);
+            Optional<Order> orderOptional = orderRepository.findById(requestDTO.getOrderId());
 
+            if (orderOptional.isEmpty()) {
+                log.info("订单 {} 未找到，跳过交付请求。", requestDTO.getOrderId());
+                return;
+            }
+
+            Order order = orderOptional.get();
+
+            // 在继续之前执行最终的状态检查
+            if (order.getStatus() == Order.OrderStatus.CANCELED || order.getStatus() == NON_REFUNDABLE) {
+                log.info("订单 {} 已被取消或不可退款，跳过交付请求。", order.getId());
+                return;
+            }
+
+            ObjectMapper mapper = new ObjectMapper();
+            // 序列化为 JSON 字符串
+            String jsonMessage = mapper.writeValueAsString(requestDTO);
+
+            // 转发给交付服务，因为订单未被取消或不可退款
+            order.setStatus(NON_REFUNDABLE);
+            orderRepository.save(order);
+            log.info("订单 {} 设置为不可退款", order.getId());
+            rabbitTemplate.convertAndSend(DELIVERY_QUEUE, jsonMessage);
+        } catch (Exception e) {
+            log.error("An error occurred processing the delivery queue：", e);
+        }
+    }
+
+    @RabbitListener(queues = DELIVERR_RESPONSE_QUEUE)
+    public void receiveDeliveryResponse(String message) {
         try {
             // 反序列化 JSON 为 DeliveryResponseDTO
             DeliveryResponseDTO responseDTO = mapper.readValue(message, DeliveryResponseDTO.class);
-            System.out.println("Received delivery response: " + responseDTO);
+            Long orderId = responseDTO.getOrderId();
+            DeliveryStatus deliveryStatus = responseDTO.getDeliveryStatus();
 
-            // 这里写的是在Store收到DeliveryCo的消息之后的逻辑。
-            if (responseDTO.getDeliveryStatus()== DeliveryStatus.LOST){
-                //这里是丢件后的逻辑。
+            Optional<Order> orderOptional = orderRepository.findById(orderId);
+            if (orderOptional.isEmpty()) {
+                log.info("订单 {} 未找到，跳过处理。", orderId);
+                return;
             }
-            else{
-                //这里是通过email向用户发送信息。
-            }
-            //调用emailService给用户发现消息。
 
+            Order order = orderOptional.get();
+
+            if (deliveryStatus == DeliveryStatus.REQUEST_RECEIVED) {
+                order.setStatus(NON_REFUNDABLE);
+                orderRepository.save(order);
+            } else {
+                log.info("The order: {} is {}", orderId, deliveryStatus);
+            }
+
+            // 获取订单信息并发送电子邮件通知
+            OrderDTO orderDTO = new OrderDTO(order, true);
+            emailService.sendEmailRequest(orderDTO, deliveryStatus);
+
+        } catch (JsonProcessingException e) {
+            log.error("Failed to parse delivery response message", e);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Unexpected error while processing delivery response", e);
         }
     }
 }

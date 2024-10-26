@@ -8,16 +8,17 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.List;
+
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class EmailRequestDTO {
-    //emailDTO中仅包含客户的ID和邮件内容。
-    @JsonProperty("customer_id")
-    private Long CustomerId;
-
-    @JsonProperty("content")
-    private String Content;
+    @JsonProperty("customer_name")
+    private String customerName;
+    @JsonProperty("customer_email")
+    private String customerEmail;
+    private DeliveryStatus status;
 }
