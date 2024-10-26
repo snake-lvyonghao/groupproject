@@ -42,10 +42,11 @@ const SignIn = () => {
   }, [status, message, error]);
 
   const onSubmit = (data: FormData) => {
+    console.log(data);
     PostSender(ENDPOINT, data, setStatus, setMessage, setError);
     setEmail(data.EmailAddress);
     //这个跳转只是用来测试的
-    navigate(`/mainpage/${data.EmailAddress}`);
+    // navigate(`/mainpage/${data.EmailAddress}`);
   };
 
   return (

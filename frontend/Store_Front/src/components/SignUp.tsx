@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { Field } from "../components/ui/field";
 import PostSender from "./RESTFul/PostSender";
-import { UserEndPoint } from "./services/EndPoints";
+import { signUpEndPoint, UserEndPoint } from "./services/EndPoints";
 import { PasswordInput } from "./ui/password-input";
 import { toaster } from "./ui/toaster";
 
@@ -23,7 +23,7 @@ const schema = z
     message: "Passwords do not match",
     path: ["confirmPassword"],
   });
-const ENDPOINT = UserEndPoint;
+const ENDPOINT = signUpEndPoint;
 
 type FormData = z.infer<typeof schema>;
 

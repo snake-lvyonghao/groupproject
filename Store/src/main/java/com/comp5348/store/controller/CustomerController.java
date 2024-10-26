@@ -16,8 +16,9 @@ public class CustomerController {
 
     @PostMapping
     public ResponseEntity<String> login(@RequestBody LoginRequest loginRequest) {
-        boolean isAuthenticated = customerService.authenticateCustomer(loginRequest.email, loginRequest.password);
+        boolean isAuthenticated = customerService.authenticateCustomer(loginRequest.EmailAddress, loginRequest.Password);
         if (isAuthenticated) {
+            System.out.println("Login successful");
             return ResponseEntity.ok("Login successful");
         } else {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
@@ -35,8 +36,8 @@ public class CustomerController {
     }
 
      public static  class LoginRequest {
-         public String email;
-         public String password;
+         public String EmailAddress ;
+         public String Password;
     }
 
      public static class SignUpRequest {
