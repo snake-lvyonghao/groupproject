@@ -84,6 +84,14 @@ const SignIn = () => {
               </Stack>
             </Card.Body>
             <Card.Footer justifyContent="flex-end">
+              <Button
+                color="black"
+                onClick={() => {
+                  navigate("/signup");
+                }}
+              >
+                Sign Up
+              </Button>
               <Button type="submit" color="black">
                 Sign In
               </Button>
