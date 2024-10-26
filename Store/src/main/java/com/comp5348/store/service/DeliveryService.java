@@ -18,11 +18,17 @@ import java.util.stream.Collectors;
 @Service
 public class DeliveryService {
     private final RabbitTemplate rabbitTemplate;
+    private final EmailService emailService;
+    private final OrderService orderService;
     private final static String DELIVERY_QUEUE = "delivery.request.queue";
 
     @Autowired
-    public DeliveryService(RabbitTemplate rabbitTemplate) {
+    public DeliveryService(RabbitTemplate rabbitTemplate,
+                           EmailService emailService,
+                           OrderService orderService) {
         this.rabbitTemplate = rabbitTemplate;
+        this.emailService = emailService;
+        this.orderService = orderService;
     }
 
     public void sendDeliveryRequest(OrderDTO orderDTO) throws JsonProcessingException {
@@ -64,11 +70,13 @@ public class DeliveryService {
 
             // 这里写的是在Store收到DeliveryCo的消息之后的逻辑。
             if (responseDTO.getDeliveryStatus()== DeliveryStatus.LOST){
+
                 //这里是丢件后的逻辑。
             }
-            else{
-                //这里是通过email向用户发送信息。
-            }
+
+            OrderDTO orderDTO = orderService.getOrderById(responseDTO.getOrderId());
+            emailService.sendEmailRequest(orderDTO, responseDTO.getDeliveryStatus());
+
             //调用emailService给用户发现消息。
 
         } catch (Exception e) {
