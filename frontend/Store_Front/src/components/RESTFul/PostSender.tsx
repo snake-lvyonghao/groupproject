@@ -23,11 +23,13 @@ const PostSender = async (
       ...requestConfig,
     })
     .then((res) => {
+      console.log(res);
       //   console.log(res.status + " " + res.data.message);
       setStatus(res.status);
       setMessage(res.data);
     })
     .catch((err) => {
+      console.log(err)
       if (err instanceof CanceledError) return;
       if (err.response) {
         setStatus(err.status);

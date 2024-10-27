@@ -19,7 +19,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
+        http.cors(withDefaults())
             .csrf(csrf -> csrf.disable()) // ban CSRF
             .authorizeHttpRequests(auth -> auth
                 .anyRequest().authenticated()) // 保护所有请求

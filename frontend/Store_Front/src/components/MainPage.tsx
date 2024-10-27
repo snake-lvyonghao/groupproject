@@ -52,7 +52,6 @@ const MainPage = () => {
 
   return (
     <Box height="100vh" width="100vw">
-      <h1>{customerId}</h1>
       <Grid
         height="100vh"
         templateAreas={`"header header" "nav main"`}

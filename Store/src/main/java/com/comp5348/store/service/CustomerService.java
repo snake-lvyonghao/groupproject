@@ -41,8 +41,8 @@ public class CustomerService {
     }
 
 
-    public boolean authenticateCustomer(String email, String rawPassword) {
-        Optional<Customer> optionalCustomer = customerRepository.findByEmail(email);
+    public boolean authenticateCustomer(String username, String rawPassword) {
+        Optional<Customer> optionalCustomer = customerRepository.findByName(username);
         if (optionalCustomer.isPresent()) {
             Customer customer = optionalCustomer.get();
             return customer.checkPassword(rawPassword); // 验证密码
