@@ -45,7 +45,7 @@ public class OrderService {
 
     @GlobalTransactional
     public OrderDTO createOrder(Long goodsId, Long customerId, int quantity) {
-        // 查找商品和客户
+        // Find products and customers
         Optional<Goods> goodsOptional = goodsRepository.findById(goodsId);
         Optional<Customer> customerOptional = customerRepository.findById(customerId);
 
@@ -58,10 +58,10 @@ public class OrderService {
         Goods goods = goodsOptional.get();
         Customer customer = customerOptional.get();
 
-        // 计算订单总价
+        // calculate total price
         double totalPrice = goods.getPrice() * quantity;
 
-        // 创建订单对象
+        // creat order object
         Order order = new Order();
         order.setGoods(goods);
         order.setCustomer(customer);
@@ -69,26 +69,26 @@ public class OrderService {
         order.setTotalPrice(totalPrice);
         order.setStatus(REFUNDABLE);
 
-        // 保存订单到数据库
+        // save order
         order = orderRepository.save(order);
 
-        // 创建上下文对象
+        // creat context for seata tcc
         BusinessActionContext actionContext = new BusinessActionContext();
 
-        // 1. 尝试冻结库存
+        // prepare phase
         boolean stockFrozen = warehouseGoodsService.tryFreezeStock(actionContext, goodsId, quantity, order);
         if (!stockFrozen) {
             throw new RuntimeException("Stock freezing failed. Insufficient inventory.");
         }
 
-        // 2. 尝试冻结余额（扣款）
+        // frozen
         OrderDTO orderDTO = new OrderDTO(order, true);
         boolean paymentSuccess = bankService.prepareTransaction(actionContext, orderDTO, false);
         if (!paymentSuccess) {
             throw new RuntimeException("Payment freezing failed.");
         }
 
-        // 异步通知DeliveryCO取货
+        // Asynchronously notify DeliveryCO to pick up
         try {
             notificationService.sendDeliveryRequest(orderDTO);
         } catch (JsonProcessingException e) {

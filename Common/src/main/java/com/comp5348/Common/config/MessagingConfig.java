@@ -38,27 +38,25 @@ public class MessagingConfig {
 
     @Bean
     public Queue delayQueue() {
-        // 配置延迟队列的参数
+        // args
         Map<String, Object> args = new HashMap<>();
 
-        // 设置死信交换器，用于将消息从延迟队列转发到实际处理队列中
         args.put("x-dead-letter-exchange", "direct-exchange");
-        // 设置死信路由键，用于将消息从延迟队列转发到指定的路由键对应的队列
+        // The dead-letter routing key is used to forward messages from the delay queue to the queue corresponding to the specified routing key
         args.put("x-dead-letter-routing-key", PACK_QUEUE);
-        // 设置消息的 TTL（存活时间），10秒
+        // Set the TTL (live time) of the message to 10 seconds
         args.put("x-message-ttl", 10000);
 
-        // 创建一个名为 "delay.delivery.request.queue" 的持久化队列
+
         return new Queue(DELAY_QUEUE, true, false, false, args);
     }
 
-    // 配置交换器
     @Bean
     public DirectExchange directExchange() {
         return new DirectExchange("direct-exchange");
     }
 
-    // 绑定 Pack 队列到交换器
+    // bind queue
     @Bean
     public Binding bindPackQueue(Queue packQueue, DirectExchange directExchange) {
         return BindingBuilder.bind(packQueue).to(directExchange).with(PACK_QUEUE);

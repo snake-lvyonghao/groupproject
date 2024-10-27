@@ -32,11 +32,10 @@ public class EmailService {
 
         ObjectMapper mapper = new ObjectMapper();
 
-        // 发送顾客姓名，邮箱地址，配送状态给Email
-        // 序列化为 JSON 字符串
+        // Send customer name, Email address and delivery status to email
+        // Serialize to JSON string
         String jsonMessage = mapper.writeValueAsString(emailRequestDTO);
 
-        // 发送 JSON 到 RabbitMQ 队列
         rabbitTemplate.convertAndSend(MessagingConfig.EMAIL_QUEUE, jsonMessage);
     }
 }

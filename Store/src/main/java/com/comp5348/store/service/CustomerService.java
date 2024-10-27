@@ -22,21 +22,21 @@ public class CustomerService {
     public CustomerDTO registerCustomer(String name, String rawPassword,String email) {
         Customer customer = new Customer();
         customer.setName(name);
-        customer.encryptAndSetPassword(rawPassword); // 使用加密密码
+        customer.encryptAndSetPassword(rawPassword);
         customer.setEmail(email);
-        customerRepository.save(customer);  // 保存用户到数据库
+        customerRepository.save(customer);
         return new CustomerDTO(customer);
     }
 
-    // 根据 ID 查找用户
+
     public CustomerDTO getCustomerById(long customerId) {
         Optional<Customer> customer = customerRepository.findById(customerId);
         return customer.map(CustomerDTO::new).orElse(null);
     }
 
-    // 登录验证用户
+
     public boolean authenticateCustomer(String email, String rawPassword) {
-        Optional<Customer> optionalCustomer = customerRepository.findByEmail(email);//修改为通过email查询
+        Optional<Customer> optionalCustomer = customerRepository.findByEmail(email);
         if (optionalCustomer.isPresent()) {
             Customer customer = optionalCustomer.get();
             return customer.checkPassword(rawPassword); // 验证密码
@@ -44,13 +44,13 @@ public class CustomerService {
         return false;
     }
 
-    // 更新用户密码
+
     public Customer updatePassword(long customerId, String newPassword) {
         Optional<Customer> optionalCustomer = customerRepository.findById(customerId);
         if (optionalCustomer.isPresent()) {
             Customer customer = optionalCustomer.get();
-            customer.encryptAndSetPassword(newPassword);  // 加密新密码
-            return customerRepository.save(customer);  // 更新保存用户
+            customer.encryptAndSetPassword(newPassword);
+            return customerRepository.save(customer);
         } else {
             throw new RuntimeException("Customer not found");
         }

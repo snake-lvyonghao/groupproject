@@ -40,11 +40,11 @@ public class BankService {
 
     @TwoPhaseBusinessAction(name = "prepareBankTransaction", commitMethod = "commitTransaction", rollbackMethod = "rollbackTransaction")
     public boolean prepareTransaction(BusinessActionContext context, OrderDTO order, boolean isRefund) {
-        //isRefund True 退款 False 付款
+        //isRefund True refund False payment
         String fromAccount = isRefund ? "Store" : order.getCustomer().getName();
         String toAccount = isRefund ? order.getCustomer().getName() : "Store";
 
-        // 创建事务记录并保存为 OPEN 状态
+        // Create a transaction record and save it as OPEN
         Transaction transaction = new Transaction();
         transaction.setFromAccount(fromAccount);
         transaction.setToAccount(toAccount);
@@ -52,10 +52,10 @@ public class BankService {
         transaction.setStatus(OPEN);
         transaction = transactionRepository.save(transaction);
 
-        // 把事务 ID 保存到上下文中以便于 commit 和 rollback 阶段使用
+        // Save the transaction ID in context for use during the commit and rollback phases
         context.addActionContext("transactionId", transaction.getId());
         log.info(transaction.getFromAccount() +  " " +transaction.getToAccount() + " " + transaction.getAmount());
-        // 执行银行扣款操作
+        // Perform bank debit operations
         Future<PrepareResponse> bankResponseFuture = bankStub.prepare(PrepareRequest.newBuilder()
                 .setFromAccount(fromAccount)
                 .setToAccount(toAccount)
@@ -66,16 +66,16 @@ public class BankService {
         try {
             PrepareResponse bankResponse = bankResponseFuture.get();
             if (bankResponse.getSuccess()) {
-                // 如果 prepare 成功，返回 true
+                // Return true if prepare succeeds
                 return true;
             } else {
-                // 如果 prepare 失败，更新事务状态为 FAILED
+                // If prepare fails, the transaction status is changed to FAILED
                 transaction.setStatus(FAILED);
                 transactionRepository.save(transaction);
                 return false;
             }
         } catch (InterruptedException | ExecutionException e) {
-            // 如果出现异常，更新事务状态为 FAILED
+            // If an exception occurs, update the transaction status to FAILED
             transaction.setStatus(FAILED);
             transactionRepository.save(transaction);
             throw new RuntimeException("Prepare phase failed.", e);
@@ -85,16 +85,16 @@ public class BankService {
     public boolean commitTransaction(BusinessActionContext context) {
         Integer transactionId = (Integer) context.getActionContext("transactionId");
 
-        // 获取事务记录
+        // Get transaction record
         Transaction transaction = transactionRepository.findById(Long.valueOf(transactionId)).orElse(null);
         if (transaction == null || transaction.getStatus() == SUCCESS) {
             log.info("Transaction {} is already committed or does not exist.", transactionId);
-            return true; // 如果事务已经成功提交或者不存在，直接返回成功
+            return true; // If the transaction has been successfully committed or does not exist, return success directly
         }
 
         log.info("Attempting to commit transaction with ID: {}", transactionId);
 
-        // 执行 commit 操作
+        // grpc commit
         Future<CommitResponse> commitResponseFuture = bankStub.commit(CommitRequest.newBuilder()
                 .setTransactionId(transactionId)
                 .build());
@@ -102,18 +102,18 @@ public class BankService {
         try {
             CommitResponse commitResponse = commitResponseFuture.get();
             if (commitResponse.getSuccess()) {
-                // 如果 commit 成功，更新事务状态为 SUCCESS
+                // If commit succeeds, update the transaction status to SUCCESS
                 transaction.setStatus(SUCCESS);
                 transactionRepository.save(transaction);
                 log.info("Commit successful for transactionId: {}", transactionId);
                 return true;
             } else {
                 log.warn("Commit failed for transactionId: {}", transactionId);
-                return false; // 告知 Seata 提交失败，Seata 会决定是否重试或回滚
+                return false; // Inform Seata that the submission failed, and Seata will decide whether to retry or roll back
             }
         } catch (InterruptedException | ExecutionException e) {
             log.error("Exception occurred during commit for transactionId: {}. Error: {}", transactionId, e.getMessage(), e);
-            return false; // 返回 false，让 Seata 处理重试或回滚逻辑
+            return false; // Return false and let Seata handle retry or rollback logic
         }
     }
 
@@ -126,7 +126,7 @@ public class BankService {
         Transaction transaction = transactionRepository.findById(Long.valueOf(transactionId)).orElse(null);
         if (transaction == null || transaction.getStatus() == FAILED) {
             log.info("Transaction {} is already rolled back or does not exist.", transactionId);
-            return true; // 如果事务已经回滚或者不存在，直接返回成功，避免重复回滚
+            return true; // If the transaction has been rolled back or does not exist, return success directly to avoid repeated rollbacks
         }
 
         log.info("Attempting to rollback transaction with ID: {}", transactionId);
@@ -143,14 +143,14 @@ public class BankService {
                 transaction.setStatus(FAILED);
                 transactionRepository.save(transaction);
                 log.info("Rollback successful for transactionId: {}", transactionId);
-                return true; // 回滚成功
+                    return true; // Successfully rolled back
             } else {
                 log.error("Rollback failed for transactionId: {}", transactionId);
-                return false; // 告知 Seata 回滚失败
+                return false; // Inform Seata that the rollback failed
             }
         } catch (InterruptedException | ExecutionException e) {
             log.error("Exception occurred during rollback for transactionId: {}. Error: {}", transactionId, e.getMessage(), e);
-            return false; // 返回 false，让 Seata 决定如何处理
+            return false; // Return false and let Seata decide what to do
         }
     }
 

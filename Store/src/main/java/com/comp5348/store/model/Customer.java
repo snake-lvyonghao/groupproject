@@ -25,22 +25,22 @@ public class Customer {
 
 
     @Column(nullable = false)
-    private String password;  // 密码字段
+    private String password;
 
-    @Email  // 验证是否符合邮箱格式
-    @Column(nullable = false, unique = true)  // 设置为唯一，防止多个用户使用同一邮箱注册
-    private String email;  // 修改字段名为 email, 避免与注解名冲突
+    @Email
+    @Column(nullable = false, unique = true)  // Set to unique to prevent multiple users from registering with the same email address
+    private String email;
 
-    // 使用 BCryptPasswordEncoder 对密码进行加密
+    // BCryptPasswordEncoder
     public void encryptAndSetPassword(String rawPassword) {
         BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-        this.password = passwordEncoder.encode(rawPassword);  // 加密密码
+        this.password = passwordEncoder.encode(rawPassword);
     }
 
     // 验证密码
     public boolean checkPassword(String rawPassword) {
         BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-        return passwordEncoder.matches(rawPassword, this.password);  // 验证密码
+        return passwordEncoder.matches(rawPassword, this.password);
     }
 
 }

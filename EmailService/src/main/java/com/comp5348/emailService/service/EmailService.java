@@ -22,11 +22,10 @@ public class EmailService
     @RabbitListener(queues = MessagingConfig.EMAIL_QUEUE)
     public void receiveEmailRequest(String message) {
         try {
-            // 反序列化 JSON 为 DeliveryRequestDTO
+            // Deserialize the JSON to DeliveryRequestDTO
             EmailRequestDTO requestDTO = mapper.readValue(message, EmailRequestDTO.class);
             log.info("Received email request: " + requestDTO.getCustomerEmail());
             sendEmail(requestDTO);
-            // 这里进行相应的业务处理逻辑，例如更新状态、通知仓库等
         } catch (Exception e) {
             log.error("receive email error:" + e);
         }
@@ -45,7 +44,7 @@ public class EmailService
         );
 
         String statusMessage = statusMessages.getOrDefault(requestDTO.getStatus(), "unknown status");
-        String context = "Email: " + requestDTO.getCustomerName() + ", " + statusMessage;
+        String context = "Email: " + requestDTO.getCustomerEmail() + ", CurrentOrder Status is" + " "+ statusMessage;
 
         log.info("Email context: " + context);
     }
