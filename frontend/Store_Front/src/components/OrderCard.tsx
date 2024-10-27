@@ -14,8 +14,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "./ui/dialog";
+import PostSender from "./RESTFul/PostSender";
+import { useEffect } from "react";
 
 interface props {
+  customerId:number;
   order: order;
   setStatusCode: (code: number) => void;
   setMessage: (message: string) => void;
@@ -23,12 +26,12 @@ interface props {
 }
 
 const OrderCard = ({ order, setStatusCode, setMessage, setError }: props) => {
-  const { EmailAddress } = useParams();
-  const ENDPOINT = OrderEndPoint + "/" + EmailAddress + "/" + order.id;
+  const ENDPOINT = OrderEndPoint + "/" +"refund";
+
 
   const onClick = () => {
     //这里还差发送Get请求的逻辑
-    GETSender(ENDPOINT, setStatusCode, setMessage, setError);
+    PostSender(ENDPOINT, {orderId:order.id},setStatusCode, setMessage, setError);
   };
 
   return (

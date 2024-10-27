@@ -18,14 +18,14 @@ const PostSender = async (
   if (!postData) return;
   console.log("PostSender is working");
   apiClient
-    .post<ApiResponse>(endpoint, postData, {
+    .post<string>(endpoint, postData, {
       signal: controller.signal,
       ...requestConfig,
     })
     .then((res) => {
       //   console.log(res.status + " " + res.data.message);
       setStatus(res.status);
-      setMessage(res.data.message);
+      setMessage(res.data);
     })
     .catch((err) => {
       if (err instanceof CanceledError) return;

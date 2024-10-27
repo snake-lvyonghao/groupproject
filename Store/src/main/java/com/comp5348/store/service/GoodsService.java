@@ -6,7 +6,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class GoodsService {
@@ -27,6 +29,13 @@ public class GoodsService {
         } catch (Exception e) {
             throw new RuntimeException("Failed to create or update goods.", e);
         }
+    }
+
+//获取商品列表
+    public List<GoodsDTO> getAllGoods() {
+        return goodsRepository.findAll().stream()
+                .map(GoodsDTO::new)
+                .collect(Collectors.toList());
     }
 
     public GoodsDTO getGoodsById(long id) {

@@ -34,9 +34,15 @@ public class CustomerService {
         return customer.map(CustomerDTO::new).orElse(null);
     }
 
+    // 根据 username 查找用户
+    public CustomerDTO getCustomerByUsername(String username) {
+        Optional<Customer> customer = customerRepository.findByName(username);
+        return customer.map(CustomerDTO::new).orElse(null);
+    }
+
     // 登录验证用户
-    public boolean authenticateCustomer(String email, String rawPassword) {
-        Optional<Customer> optionalCustomer = customerRepository.findByEmail(email);//修改为通过email查询
+    public boolean authenticateCustomer(String username, String rawPassword) {
+        Optional<Customer> optionalCustomer = customerRepository.findByName(username);
         if (optionalCustomer.isPresent()) {
             Customer customer = optionalCustomer.get();
             return customer.checkPassword(rawPassword); // 验证密码

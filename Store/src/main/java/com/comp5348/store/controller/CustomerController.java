@@ -16,7 +16,7 @@ public class CustomerController {
 
     @PostMapping
     public ResponseEntity<String> login(@RequestBody LoginRequest loginRequest) {
-        boolean isAuthenticated = customerService.authenticateCustomer(loginRequest.EmailAddress, loginRequest.Password);
+        boolean isAuthenticated = customerService.authenticateCustomer(loginRequest.Username, loginRequest.Password);
         if (isAuthenticated) {
             System.out.println("Login successful");
             return ResponseEntity.ok("Login successful");
@@ -35,8 +35,19 @@ public class CustomerController {
 
     }
 
+    @GetMapping("/{username}")
+    public ResponseEntity<Long> getCustomer(@PathVariable String username) {
+        CustomerDTO customerDTO=customerService.getCustomerByUsername(username);
+        if(customerDTO!=null){
+            return ResponseEntity.ok(customerDTO.getId());
+        }else{
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(-1L);
+        }
+    }
+
+
      public static  class LoginRequest {
-         public String EmailAddress ;
+         public String Username ;
          public String Password;
     }
 
@@ -46,4 +57,6 @@ public class CustomerController {
          public String Password;
 
     }
+
+
 }

@@ -4,16 +4,19 @@ import { cartProduct } from "./MainPage";
 import { Toaster } from "./ui/toaster";
 
 interface props {
+  customerId:number;
   cartProducts: cartProduct[];
   Remove: (newCartProducts: cartProduct[]) => void;
 }
 
-const Cart = ({ cartProducts, Remove }: props) => {
+const Cart = ({customerId,cartProducts, Remove }: props) => {
   return (
     <Stack gap="4" direction="row" wrap="wrap">
       <Toaster />
       {cartProducts?.map((cartProduct: cartProduct) => (
         <CartCard
+        key={cartProduct.cart_id}
+        customerId={customerId}
           cartProduct={cartProduct}
           cartProducts={cartProducts}
           Remove={Remove}

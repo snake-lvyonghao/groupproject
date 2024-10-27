@@ -2,13 +2,13 @@ import { AxiosRequestConfig, CanceledError } from "axios";
 import apiClient from "../services/api-client";
 
 interface ApiResponse {
-  body: string;
+  data:number;
 }
 
-const GETSender = (
+const GETSenderNumber = (
   endpoint: string,
   setStatus: (code: number) => void,
-  setMessage: (mes: string) => void,
+  setData: (data:number) => void,
   setError: (error: string) => void,
   requestConfig?: AxiosRequestConfig
 ) => {
@@ -16,14 +16,15 @@ const GETSender = (
 
   console.log("GetSender is working");
   apiClient
-    .get<ApiResponse>(endpoint, {
+    .get<number>(endpoint, {
       signal: controller.signal,
       ...requestConfig,
     })
     .then((res) => {
       //   console.log(res.status + " " + res.data.message);
       setStatus(res.status);
-      setMessage(res.data.body);
+      setData(res.data);
+     
     })
     .catch((err) => {
       if (err instanceof CanceledError) return;
@@ -34,4 +35,4 @@ const GETSender = (
     });
 };
 
-export default GETSender;
+export default GETSenderNumber;

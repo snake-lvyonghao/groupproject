@@ -23,12 +23,12 @@ public class OrderController {
     }
 
     @PostMapping
-    public ResponseEntity<OrderDTO> createOrder(@RequestBody CreateOrderRequest request) {
+    public ResponseEntity<String> createOrder(@RequestBody CreateOrderRequest request) {
         // 输出日志信息，描述接收到的请求
         log.info("Received request to create order for goodsId: {}, customerId: {}, quantity: {}",
                 request.goodsId, request.customerId, request.quantity);
         OrderDTO orderDTO = orderService.createOrder(request.goodsId, request.customerId, request.quantity);
-        return ResponseEntity.ok(orderDTO);
+        return ResponseEntity.ok("Order created successfully");
     }
     @PostMapping("/refund")
     public ResponseEntity<String> refundOrder(@RequestBody RefundOrderRequest request) {

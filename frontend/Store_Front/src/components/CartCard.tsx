@@ -18,14 +18,14 @@ import {
 import { Toaster, toaster } from "./ui/toaster";
 
 interface props {
+  customerId:number;
   cartProduct: cartProduct;
   cartProducts: cartProduct[];
   Remove: (choice: cartProduct[]) => void;
 }
 
-const CartCard = ({ cartProduct, cartProducts, Remove }: props) => {
-  const { EmailAddress } = useParams();
-  const ENDPOINT = OrderEndPoint + "/" + EmailAddress;
+const CartCard = ({customerId,cartProduct, cartProducts, Remove }: props) => {
+  const ENDPOINT = OrderEndPoint;
 
   const [status, setStatus] = useState(0);
   const [message, setMessage] = useState("");
@@ -34,10 +34,18 @@ const CartCard = ({ cartProduct, cartProducts, Remove }: props) => {
   //用useEffect来检测订单提交的返回值;
   useEffect(() => {
     if (status === 200) {
+      console.log("order created");
+      
       toaster.create({
         title: "Check out successfully.",
         type: "success",
       });
+
+      //从购物车中移除商品
+      const newCartProducts = cartProducts.filter(
+        (product) => product.cart_id != cartProduct.cart_id
+      );
+       Remove(newCartProducts);
     }
     if (message) console.log(message);
     if (error) console.log(error);
@@ -46,25 +54,14 @@ const CartCard = ({ cartProduct, cartProducts, Remove }: props) => {
   const onClick = () => {
     //1.发送POST请求。
     const order = {
-      id: cartProduct.id,
-      name: cartProduct.name,
-      price: cartProduct.price,
+      goodsId: cartProduct.id,
+      customerId:customerId,
       quantity: cartProduct.quantity,
     };
     //这里还差发送POST的逻辑
     PostSender(ENDPOINT, order, setStatus, setMessage, setError);
 
     //2.从购物车中删除该商品.
-    console.log(cartProduct.cart_id);
-    const newCartProducts = cartProducts.filter(
-      (product) => product.cart_id != cartProduct.cart_id
-    );
-    Remove(newCartProducts);
-
-    toaster.create({
-      title: "Check out Successfully.",
-      type: "success",
-    });
   };
 
   return (

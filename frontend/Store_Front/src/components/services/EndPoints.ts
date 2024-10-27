@@ -1,4 +1,4 @@
 export const UserEndPoint = "/login";
 export const signUpEndPoint="/login/signup";
-export const ProductsEndPoint = "";
-export const OrderEndPoint = "";
+export const ProductsEndPoint = "/goods";
+export const OrderEndPoint = "/orders";

@@ -25,6 +25,8 @@ const MainPage = () => {
   //这个usestate用来控制购物车中的商品.
   const [cartProducts, setCartProducts] = useState<cartProduct[]>([]);
 
+  const [customerId,setCustomerId]=useState(-1);
+
   //用于标识购物车中的记录。
   const [cartId, setCartId] = useState(0);
 
@@ -32,6 +34,8 @@ const MainPage = () => {
   if (main == "Menu") {
     mainAreaComponent = (
       <ProductList
+      customerId={customerId}
+      setCustomerId={setCustomerId}
         cartCount={cartId}
         SetCartCount={setCartId}
         cartProducts={cartProducts}
@@ -39,15 +43,16 @@ const MainPage = () => {
       />
     );
   } else if (main == "OrderHistory") {
-    mainAreaComponent = <OrderHistory />;
+    mainAreaComponent = <OrderHistory customerId={customerId}/>;
   } else {
     mainAreaComponent = (
-      <Cart cartProducts={cartProducts} Remove={setCartProducts} />
+      <Cart  customerId={customerId} cartProducts={cartProducts} Remove={setCartProducts} />
     );
   }
 
   return (
     <Box height="100vh" width="100vw">
+      <h1>{customerId}</h1>
       <Grid
         height="100vh"
         templateAreas={`"header header" "nav main"`}
