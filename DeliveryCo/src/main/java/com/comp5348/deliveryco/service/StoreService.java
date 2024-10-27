@@ -21,7 +21,7 @@ import static com.comp5348.Common.config.MessagingConfig.DELIVERR_RESPONSE_QUEUE
 import static com.comp5348.Common.config.MessagingConfig.DELIVERY_QUEUE;
 
 @Service
-@Slf4j
+@Slf4j(topic = "com.comp5348.deliveryco")
 public class StoreService {
     private final RabbitTemplate rabbitTemplate;
 

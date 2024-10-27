@@ -21,7 +21,7 @@ import java.util.Optional;
 import static com.comp5348.Common.config.MessagingConfig.*;
 import static com.comp5348.store.model.Order.OrderStatus.NON_REFUNDABLE;
 
-@Slf4j
+@Slf4j(topic = "com.comp5348.store")
 @Service
 public class DeliveryService {
     private final RabbitTemplate rabbitTemplate;

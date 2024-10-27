@@ -23,7 +23,7 @@ import static com.comp5348.store.model.Order.OrderStatus.REFUNDABLE;
 
 @Service
 @LocalTCC
-@Slf4j
+@Slf4j(topic = "com.comp5348.store")
 public class OrderService {
 
     private final OrderRepository orderRepository;

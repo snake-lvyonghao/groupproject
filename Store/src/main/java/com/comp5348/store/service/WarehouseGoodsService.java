@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-@Slf4j
+@Slf4j(topic = "com.comp5348.store")
 @LocalTCC
 public class WarehouseGoodsService {
 
