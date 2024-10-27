@@ -16,7 +16,7 @@ import java.util.List;
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class DeliveryResponseDTO {
-    //快递公司的回复信息仅包含两个字段，订单编号和快递状态。
+
     @JsonProperty("order_id")
     private Long orderId;
 

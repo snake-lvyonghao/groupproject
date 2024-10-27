@@ -21,7 +21,7 @@ import java.util.Optional;
 import static com.comp5348.Common.config.MessagingConfig.*;
 import static com.comp5348.store.model.Order.OrderStatus.NON_REFUNDABLE;
 
-@Slf4j
+@Slf4j(topic = "com.comp5348.store")
 @Service
 public class DeliveryService {
     private final RabbitTemplate rabbitTemplate;
@@ -37,82 +37,80 @@ public class DeliveryService {
         this.orderRepository = orderRepository;
     }
 
-    @Async
-    public void sendDeliveryRequest(OrderDTO orderDTO) throws JsonProcessingException {
-        // 构建 DeliveryRequestDTO
-        DeliveryRequestDTO deliveryRequestDTO = new DeliveryRequestDTO();
-        deliveryRequestDTO.setOrderId(orderDTO.getId());
-
-        ObjectMapper mapper = new ObjectMapper();
-
-        // 发送订单信息给DeliveryCo
-        // 序列化为 JSON 字符串
-        String jsonMessage = mapper.writeValueAsString(deliveryRequestDTO);
-
-        // 发送 JSON 到 RabbitMQ 队列
-        rabbitTemplate.convertAndSend(DELAY_QUEUE, jsonMessage);
-    }
-
-    private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
-
-    //监听10秒之后的队列
+    //Listen for the queue after 10 seconds
     @RabbitListener(queues = PACK_QUEUE)
     public void processDeliveryQueue(String message) {
         try {
+            log.info("PACK_QUEUE");
             DeliveryRequestDTO requestDTO = mapper.readValue(message, DeliveryRequestDTO.class);
             Optional<Order> orderOptional = orderRepository.findById(requestDTO.getOrderId());
 
             if (orderOptional.isEmpty()) {
-                log.info("订单 {} 未找到，跳过交付请求。", requestDTO.getOrderId());
+                log.info("Order {} not found, skip delivery request.", requestDTO.getOrderId());
                 return;
             }
 
             Order order = orderOptional.get();
 
-            // 在继续之前执行最终的状态检查
-            if (order.getStatus() == Order.OrderStatus.CANCELED || order.getStatus() == NON_REFUNDABLE) {
-                log.info("订单 {} 已被取消或不可退款，跳过交付请求。", order.getId());
-                return;
+            // Perform a final status check before continuing
+            switch (order.getStatus()) {
+                case CANCELED:
+                case NON_REFUNDABLE:
+                    log.info("Order {} has been cancelled or is non-refundable, skip delivery request.", order.getId());
+                    return;
+                default:
+                    break;
             }
 
+
             ObjectMapper mapper = new ObjectMapper();
-            // 序列化为 JSON 字符串
+            // Forward to the delivery service as the order has not been cancelled or is non-refundable
             String jsonMessage = mapper.writeValueAsString(requestDTO);
 
             // 转发给交付服务，因为订单未被取消或不可退款
             order.setStatus(NON_REFUNDABLE);
             orderRepository.save(order);
-            log.info("订单 {} 设置为不可退款", order.getId());
+            log.info("订单已发送不可撤销 {}", requestDTO.getOrderId());
             rabbitTemplate.convertAndSend(DELIVERY_QUEUE, jsonMessage);
         } catch (Exception e) {
             log.error("An error occurred processing the delivery queue：", e);
         }
     }
+    @Async
+    public void sendDeliveryRequest(OrderDTO orderDTO) throws JsonProcessingException {
+        // Build the DeliveryRequestDTO
+        DeliveryRequestDTO deliveryRequestDTO = new DeliveryRequestDTO();
+        deliveryRequestDTO.setOrderId(orderDTO.getId());
+
+        ObjectMapper mapper = new ObjectMapper();
+
+        // Send order information to DeliveryCo
+        // Serialize to JSON string
+        String jsonMessage = mapper.writeValueAsString(deliveryRequestDTO);
+
+        rabbitTemplate.convertAndSend(DELAY_QUEUE, jsonMessage);
+    }
+
+    private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @RabbitListener(queues = DELIVERR_RESPONSE_QUEUE)
     public void receiveDeliveryResponse(String message) {
         try {
-            // 反序列化 JSON 为 DeliveryResponseDTO
+            log.info("DELIVERR_RESPONSE_QUEUE");
+            // Deserialize JSON to DeliveryResponseDTO
             DeliveryResponseDTO responseDTO = mapper.readValue(message, DeliveryResponseDTO.class);
             Long orderId = responseDTO.getOrderId();
             DeliveryStatus deliveryStatus = responseDTO.getDeliveryStatus();
 
             Optional<Order> orderOptional = orderRepository.findById(orderId);
             if (orderOptional.isEmpty()) {
-                log.info("订单 {} 未找到，跳过处理。", orderId);
+                log.info("Order {} not found, skip processing.", orderId);
                 return;
             }
 
             Order order = orderOptional.get();
 
-            if (deliveryStatus == DeliveryStatus.REQUEST_RECEIVED) {
-                order.setStatus(NON_REFUNDABLE);
-                orderRepository.save(order);
-            } else {
-                log.info("The order: {} is {}", orderId, deliveryStatus);
-            }
-
-            // 获取订单信息并发送电子邮件通知
+            // Get order information and send email notifications
             OrderDTO orderDTO = new OrderDTO(order, true);
             emailService.sendEmailRequest(orderDTO, deliveryStatus);
 

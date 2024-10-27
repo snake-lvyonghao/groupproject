@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-@Slf4j
+@Slf4j(topic = "com.comp5348.store")
 @LocalTCC
 public class WarehouseGoodsService {
 
@@ -84,24 +84,24 @@ public class WarehouseGoodsService {
             }
             int allocatedQuantity = Math.min(remainingQuantity, availableQuantity);
             log.info("Allocated {} items of goods {} from warehouse {}", allocatedQuantity, goodsId, warehouseGoods.getWarehouse().getId());
-            // 创建 OrderWarehouse 对象
+            // creat OrderWarehouse object
             OrderWarehouse orderWarehouse = new OrderWarehouse();
             orderWarehouse.setOrder(order);
             orderWarehouse.setWarehouseGoods(warehouseGoods);
             orderWarehouse.setQuantity(allocatedQuantity);
 
-            // 保存 OrderWarehouse 到数据库
+            // save
             orderWarehouseRepository.save(orderWarehouse);
 
-            // 更新 WarehouseGoods 的数量
+            // Update the quantity of WarehouseGoods
             adjustGoodsQuantity(warehouseGoods, allocatedQuantity, false);
 
-            // 更新剩余数量
+            // Update remaining quantity
             remainingQuantity -= allocatedQuantity;
 
         }
 
-        // 检查是否所有商品数量都已分配完
+        // Check that all quantities of goods have been allocated
         if (remainingQuantity > 0) {
             log.warn("Insufficient stock for goods {}", goodsId);
             return false;
@@ -111,7 +111,6 @@ public class WarehouseGoodsService {
     }
 
     public boolean confirmFreezeStock(BusinessActionContext context) {
-        // 在 confirm 阶段，这里不需要额外操作，只需返回 true 即可
         return true;
     }
 
@@ -119,16 +118,16 @@ public class WarehouseGoodsService {
         Integer orderId = (Integer) context.getActionContext("orderId");
         Order order = orderRepository.findById(Long.valueOf(orderId)).orElseThrow(() -> new RuntimeException("Order not found"));
 
-        //退货到 WarehouseGoods 并删除orderwarehouse
+        // Return to WarehouseGoods and delete orderwarehouse
         orderWarehouseRepository.findByOrder(order)
                 .forEach(orderWarehouse -> {
-                    // 调整库存，退回商品数量
+                    // Adjust inventory and return quantity of goods
                     adjustGoodsQuantity(
                             orderWarehouse.getWarehouseGoods(),
                             orderWarehouse.getQuantity(),
                             true
                     );
-                    // 删除 OrderWarehouse 记录
+                    // Delete the OrderWarehouse record
                     orderWarehouseRepository.delete(orderWarehouse);
                 });
         orderRepository.delete(order);
@@ -141,7 +140,7 @@ public class WarehouseGoodsService {
         context.addActionContext("orderId", orderId);
         orderWarehouseRepository.findByOrder(order)
                 .forEach(orderWarehouse -> {
-                    // 调整库存，退回商品数量
+                    // Adjust inventory and return quantity of goods
                     adjustGoodsQuantity(
                             orderWarehouse.getWarehouseGoods(),
                             orderWarehouse.getQuantity(),
@@ -152,7 +151,7 @@ public class WarehouseGoodsService {
     }
 
     public boolean confirmRollbackFreezeStock(BusinessActionContext context) {
-        // 在 confirm 阶段，删除订单及其相关内容
+        // In the confirm phase, delete the order and its related content
         Integer orderId = (Integer) context.getActionContext("orderId");
         Order order = orderRepository.findById(Long.valueOf(orderId)).orElseThrow(() -> new RuntimeException("Order not found"));
         // Delete orderWarhouse
@@ -161,7 +160,7 @@ public class WarehouseGoodsService {
     }
 
     public boolean cancelRollbackFreezeStock(BusinessActionContext context) {
-        //业务失败 减少库存
+        // Business failure reduces inventory
         Integer orderId = (Integer) context.getActionContext("orderId");
         Order order = orderRepository.findById(Long.valueOf(orderId)).orElseThrow(() -> new RuntimeException("Order not found"));
         orderWarehouseRepository.findByOrder(order)
@@ -177,15 +176,15 @@ public class WarehouseGoodsService {
     }
 
     public void adjustGoodsQuantity(WarehouseGoods warehouseGoods, int quantity, boolean increase) {
-        // True 增加库存 False 减少库存
+        // True increases inventory False Reduces inventory
         int newQuantity = increase ? warehouseGoods.getQuantity() + quantity : warehouseGoods.getQuantity() - quantity;
 
-        // 检查库存是否不足
+        // Check for insufficient stock
         if (newQuantity < 0) {
             return;
         }
 
-        // 更新库存数量
+        // update stock
         warehouseGoods.setQuantity(newQuantity);
         warehouseGoodsRepository.save(warehouseGoods);
     }

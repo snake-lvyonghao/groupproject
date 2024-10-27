@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit;
 
 @GrpcService
 @Service
-@Slf4j
+@Slf4j(topic = "com.comp5348.bank")
 public class BankService extends BankServiceGrpc.BankServiceImplBase {
 
     private final AccountRepository accountRepository;
@@ -33,9 +33,9 @@ public class BankService extends BankServiceGrpc.BankServiceImplBase {
     @Override
     @Transactional
     public void prepare(PrepareRequest request, StreamObserver<PrepareResponse> responseObserver) {
-        // 添加5秒延迟
+        // Added a 5-second delay
         try {
-            Thread.sleep(5000); // 延迟5秒
+            Thread.sleep(3000);
         } catch (InterruptedException e) {
             log.error("Error during delay", e);
             responseObserver.onError(e);
@@ -58,7 +58,7 @@ public class BankService extends BankServiceGrpc.BankServiceImplBase {
         transactionRecord.setId(request.getTransactionId());
 
         if (fromAccount.getBalance() >= request.getAmount()) {
-            // 冻结资金
+            //  blocked funds
             fromAccount.setFrozenAmount(fromAccount.getFrozenAmount() + request.getAmount());
             transactionRecordRepository.save(transactionRecord);
             accountRepository.save(fromAccount);
@@ -66,7 +66,7 @@ public class BankService extends BankServiceGrpc.BankServiceImplBase {
             responseObserver.onNext(PrepareResponse.newBuilder().setSuccess(true).build());
             responseObserver.onCompleted();
 
-            // 设置超时任务，在5秒后检查是否需要回滚
+            // Set a timeout task and check whether it needs to be rolled back after 5 seconds
             scheduler.schedule(() -> {
                 TransactionRecord pendingTransaction = transactionRecordRepository.findById(request.getTransactionId()).orElse(null);
                 if (pendingTransaction.getStatus() == TransactionStatus.PENDING) {
@@ -100,7 +100,7 @@ public class BankService extends BankServiceGrpc.BankServiceImplBase {
     public void commit(CommitRequest request, StreamObserver<CommitResponse> responseObserver) {
         log.info("Received commit request for transactionId: {}", request.getTransactionId());
 
-        // 查找事务记录
+        // Search Transaction record
         TransactionRecord transactionRecord = transactionRecordRepository.findById(request.getTransactionId()).orElse(null);
         if (transactionRecord == null) {
             log.warn("Transaction record not found for transactionId: {}", request.getTransactionId());
@@ -116,7 +116,7 @@ public class BankService extends BankServiceGrpc.BankServiceImplBase {
             return;
         }
 
-        // 获取账户信息
+        // Get Account information
         Account fromAccount = accountRepository.findByAccountOwner(transactionRecord.getFromAccount());
         Account toAccount = accountRepository.findByAccountOwner(transactionRecord.getToAccount());
 
@@ -132,7 +132,7 @@ public class BankService extends BankServiceGrpc.BankServiceImplBase {
         log.info("Processing commit for transactionId: {}. FromAccount: {}, ToAccount: {}, Amount: {}",
                 request.getTransactionId(), fromAccount.getAccountOwner(), toAccount.getAccountOwner(), transactionRecord.getAmount());
 
-        // 减去冻结金额并增加接收账户余额
+        // Subtract the frozen amount and increase the receiving account balance
         try {
             double frozenAmount = fromAccount.getFrozenAmount();
             double transactionAmount = transactionRecord.getAmount();
@@ -147,10 +147,10 @@ public class BankService extends BankServiceGrpc.BankServiceImplBase {
             fromAccount.setBalance(fromAccount.getBalance() - transactionAmount);
             toAccount.setBalance(toAccount.getBalance() + transactionAmount);
 
-            // 更新事务状态为成功
+            // Update the transaction status to success
             transactionRecord.setStatus(TransactionStatus.SUCCESS);
 
-            // 保存账户和事务记录
+            // Keep records of accounts and transactions
             accountRepository.save(fromAccount);
             accountRepository.save(toAccount);
             transactionRecordRepository.save(transactionRecord);
@@ -189,7 +189,7 @@ public class BankService extends BankServiceGrpc.BankServiceImplBase {
 
         switch (transactionRecord.getStatus()) {
             case PENDING:
-                // 取消冻结
+                // unfreeze
                 fromAccount.setFrozenAmount(fromAccount.getFrozenAmount() - transactionRecord.getAmount());
                 transactionRecord.setStatus(TransactionStatus.CANCELLED);
                 accountRepository.save(fromAccount);
@@ -198,7 +198,7 @@ public class BankService extends BankServiceGrpc.BankServiceImplBase {
                 break;
 
             case SUCCESS:
-                // 回滚资金转账
+                // Roll back fund transfers
                 fromAccount.setBalance(fromAccount.getBalance() + transactionRecord.getAmount());
                 toAccount.setBalance(toAccount.getBalance() - transactionRecord.getAmount());
                 transactionRecord.setStatus(TransactionStatus.ROLLED_BACK);

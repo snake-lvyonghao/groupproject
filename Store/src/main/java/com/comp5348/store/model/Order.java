@@ -21,18 +21,17 @@ public class Order {
 
     @ManyToOne
     @JoinColumn(name = "goods_id", nullable = false)
-    private Goods goods;  // 一个订单只会涉及一种商品
+    private Goods goods;
 
     @ManyToOne
     @JoinColumn(name = "customer_id", nullable = false)
-    private Customer customer;  // 每个订单对应一个客户
+    private Customer customer;
 
     @Column(nullable = false)
-    private int totalQuantity;  // 商品的总数量
+    private int totalQuantity;
 
     @Column(nullable = false)
-    private double totalPrice;  // 总价格
-
+    private double totalPrice;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private OrderStatus status;
@@ -47,8 +46,8 @@ public class Order {
     }
 
     public enum OrderStatus {
-        REFUNDABLE, // 可退单
-        NON_REFUNDABLE, // 不可退单
+        REFUNDABLE,
+        NON_REFUNDABLE,
         CANCELED
     }
 }

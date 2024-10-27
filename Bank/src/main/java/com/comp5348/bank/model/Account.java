@@ -10,17 +10,18 @@ import lombok.Setter;
 public class Account {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long accountId;  // 用户的账户ID
+    private long accountId;
 
     @Version
     private int version;
 
     @Column(nullable = false)
-    private double balance;  // 账户余额
+    private double balance;
 
     @Column(nullable = false)
-    private String accountOwner; //账户拥有者名字（对应Storeapp）
+    private String accountOwner; //Account owner name (corresponding to Storeapp)
+
 
     @Column(nullable = false)
-    private double frozenAmount = 0.0;  // 被冻结的金额
+    private double frozenAmount = 0.0;
 }
