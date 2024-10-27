@@ -61,9 +61,6 @@ subprojects {
 		compileOnly 'org.projectlombok:lombok'
 		annotationProcessor 'org.projectlombok:lombok'
 
-		implementation 'org.slf4j:slf4j-api:2.0.0'
-		implementation 'ch.qos.logback:logback-classic:1.5.6'
-		implementation 'ch.qos.logback:logback-core:1.5.6'
 
 		// seata
 		implementation 'io.seata:seata-spring-boot-starter:2.0.0'
@@ -90,23 +87,36 @@ subprojects {
 project(":Store") {
 	dependencies {
 		implementation project(":Common")
+		implementation 'org.slf4j:slf4j-api:2.0.0'
+		implementation 'ch.qos.logback:logback-classic:1.5.6'
+		implementation 'ch.qos.logback:logback-core:1.5.6'
 	}
 }
 
 project(":Bank") {
 	dependencies {
 		implementation project(":Common")
+		implementation 'org.slf4j:slf4j-api:2.0.0'
+		implementation 'ch.qos.logback:logback-classic:1.5.6'
+		implementation 'ch.qos.logback:logback-core:1.5.6'
 	}
 }
 
 project(":DeliveryCo") {
 	dependencies {
 		implementation project(":Common")
+		implementation 'org.slf4j:slf4j-api:2.0.0'
+		implementation 'ch.qos.logback:logback-classic:1.5.6'
+		implementation 'ch.qos.logback:logback-core:1.5.6'
 	}
 }
 
 project(":EmailService") {
 	dependencies {
 		implementation project(":Common")
+		implementation 'org.slf4j:slf4j-api:2.0.0'
+		implementation 'ch.qos.logback:logback-classic:1.5.6'
+		implementation 'ch.qos.logback:logback-core:1.5.6'
 	}
 }
+

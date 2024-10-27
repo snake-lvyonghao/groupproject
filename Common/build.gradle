@@ -13,8 +13,6 @@ repositories {
 
 dependencies {
 
-    // 如果有特有的依赖在此添加，例如:
-    // implementation 'com.some.library:some-library:1.0'
 }
 
 tasks.named('test') {
