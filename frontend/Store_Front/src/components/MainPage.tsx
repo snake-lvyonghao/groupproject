@@ -20,14 +20,14 @@ export interface cartProduct {
 }
 
 const MainPage = () => {
-  //这个usestate用来控制主区域的显示页面.
+  //control the content in mainarea
   const [main, SetMain] = useState("Menu");
-  //这个usestate用来控制购物车中的商品.
+  //control products in cart
   const [cartProducts, setCartProducts] = useState<cartProduct[]>([]);
 
   const [customerId,setCustomerId]=useState(-1);
 
-  //用于标识购物车中的记录。
+  //mark product in cart
   const [cartId, setCartId] = useState(0);
 
   let mainAreaComponent;

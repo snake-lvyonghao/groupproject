@@ -1,6 +1,5 @@
 import { Container, Stack } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
 import useGet from "../hooks/useGet";
 import OrderCard from "./OrderCard";
 import { OrderEndPoint } from "./services/EndPoints";
@@ -21,10 +20,10 @@ export interface order {
   totalQuantity: number;
   orderDate:Date;
 }
-//ProductList的这四个参数分别用来控制1.购物车商品id。2.设置购物车商品id。3.购物车商品。4.添加购物车商品
+
 
 const OrderHistory = ({customerId}:props) => {
-  //Order的endpoint应该是/order/{email}
+
   const ENDPOINT = OrderEndPoint + "/" + customerId;
 
   const [statusCode, setStatusCode] = useState(0);
@@ -34,9 +33,9 @@ const OrderHistory = ({customerId}:props) => {
   const[refresh,setRefesh]=useState(true);
 
     const {data,err,isLoading}=useGet<order[]>(ENDPOINT,undefined,[refresh])
-  //调用hook获取商品列表,返回的data是product的数组
+  //use hook to get order history and data is product array
 
-  //useffect用来监控status值和刷新页面
+  //useffect to trace status code and refresh page
   useEffect(()=>{
     if(statusCode==200){
       toaster.create({
@@ -52,20 +51,12 @@ const OrderHistory = ({customerId}:props) => {
 
       }
     },[statusCode])
-  //这里是测试数据
-  const order = {
-    id: 1,
-    Product_name: "shit",
-    totalQuantity: 1000,
-    totalPrice: 10000,
-  };
-  const testData = [order, order, order, order];
+
 
   return (
     <Stack gap="4" direction="row" wrap="wrap">
       <Toaster />
       {data?.map((order) => (
-        //表单上传时同时上传表格数据和当前的商品信息。
 
         <OrderCard
         key={order.id}

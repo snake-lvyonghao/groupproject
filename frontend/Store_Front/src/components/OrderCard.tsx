@@ -1,7 +1,5 @@
 import { Box, Button, Card, HStack } from "@chakra-ui/react";
-import { useParams } from "react-router-dom";
 import { order } from "./OrderHistory";
-import GETSender from "./RESTFul/GETSender";
 import { OrderEndPoint } from "./services/EndPoints";
 import {
   DialogActionTrigger,
@@ -15,7 +13,6 @@ import {
   DialogTrigger,
 } from "./ui/dialog";
 import PostSender from "./RESTFul/PostSender";
-import { useEffect } from "react";
 
 interface props {
   customerId:number;
@@ -30,7 +27,6 @@ const OrderCard = ({ order, setStatusCode, setMessage, setError }: props) => {
 
 
   const onClick = () => {
-    //这里还差发送Get请求的逻辑
     PostSender(ENDPOINT, {orderId:order.id},setStatusCode, setMessage, setError);
   };
 

@@ -6,7 +6,7 @@ import { cartProduct, product } from "./MainPage";
 import { toaster } from "./ui/toaster";
 
 const schema = z.object({
-  quantity: z.number().min(1, { message: "最小数量为1" }),
+  quantity: z.number().min(1, { message: "minimum number is 1" }),
 });
 
 type FormData = z.infer<typeof schema>;

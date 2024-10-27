@@ -10,7 +10,7 @@ import { useParams } from "react-router-dom";
 
 const ENDPOINT = ProductsEndPoint;
 
-//ProductList的这四个参数分别用来控制1.购物车商品id。2.设置购物车商品id。3.购物车商品。4.添加购物车商品
+//these parameters are 1. customerID.2.used to get and refresg customerId 3.id of products in the cart 4.set the id 5. products in cart.6. modify cart
 interface props {
   customerId:number;
   setCustomerId:(id:number)=>void;
@@ -27,7 +27,6 @@ const ProductList = ({customerId, setCustomerId,cartCount, SetCartCount, cartPro
   const {username}=useParams();
   const GetIdEndPoint=UserEndPoint+"/"+username;
 
-  //调用hook获取商品列表,返回的data是product的数组
   const { data, err, isLoading } = useGet<product[]>(ENDPOINT);
 
   useEffect(()=>{
@@ -37,19 +36,12 @@ const ProductList = ({customerId, setCustomerId,cartCount, SetCartCount, cartPro
   },[GetIdEndPoint,setCustomerId])
 
 
-  //这里是测试数据
-  const product = {
-    id: 1,
-    name: "shit",
-    price: 1000,
-  };
-  const testData = [product, product, product, product];
 
   return (
     <Stack gap="4" direction="row" wrap="wrap">
       <Toaster />
       {data?.map((Product) => (
-        //表单上传时同时上传表格数据和当前的商品信息。
+        //upload formdata and product inform at the same time 
         <ProductCard
           product={Product}
           cartCount={cartCount}

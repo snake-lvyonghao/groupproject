@@ -28,13 +28,13 @@ const SignIn = () => {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  //这个username是用来跳转页面用的
+  //this username used to navigate page
   const [username, setUsername] = useState("");
 
   //navigate
   const navigate = useNavigate();
 
-  //用useEffect来检测登录状态登录成功时跳转。
+  //useffect, status code==200 then navigate to mainpage
   useEffect(() => {
     if (status === 200) navigate(`/mainpage/${username}`);
     if (!message) console.log(message);
@@ -45,8 +45,7 @@ const SignIn = () => {
     console.log(data);
     PostSender(ENDPOINT, data, setStatus, setMessage, setError);
     setUsername(data.Username);
-    //这个跳转只是用来测试的
-    // navigate(`/mainpage/${data.EmailAddress}`);
+
   };
 
   return (

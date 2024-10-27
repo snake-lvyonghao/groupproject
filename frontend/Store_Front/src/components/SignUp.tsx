@@ -38,13 +38,11 @@ const SignUp = () => {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  //这个email是用来跳转页面用的
-  const [email, setEmail] = useState("");
 
   //navigate
   const navigate = useNavigate();
 
-  //用useEffect来提示服务器的相应
+  //useEffect to notice user
   useEffect(() => {
     if (status === 200) {
       toaster.create({
@@ -68,8 +66,6 @@ const SignUp = () => {
     const { confirmPassword, ...filteredData } = data;
     PostSender(ENDPOINT, filteredData, setStatus, setMessage, setError);
     console.log(filteredData);
-    //这个跳转只是用来测试的
-    // navigate("/");
   };
 
   return (

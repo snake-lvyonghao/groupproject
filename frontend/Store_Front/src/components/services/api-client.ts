@@ -8,7 +8,7 @@ const base64AuthString=btoa(authString);
 
 
 export default axios.create({
-  //在这里填入API的根目录
+  // root directory of api
   baseURL: "http://localhost:8085/api/",
   params: {},
   headers:{

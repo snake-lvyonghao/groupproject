@@ -1,6 +1,5 @@
 import { Box, Button, Card, HStack } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
 import { cartProduct } from "./MainPage";
 import PostSender from "./RESTFul/PostSender";
 import { OrderEndPoint } from "./services/EndPoints";
@@ -31,17 +30,17 @@ const CartCard = ({customerId,cartProduct, cartProducts, Remove }: props) => {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  //用useEffect来检测订单提交的返回值;
+  //useEffect to trace status code
   useEffect(() => {
     if (status === 200) {
       console.log("order created");
-      
+
       toaster.create({
         title: "Check out successfully.",
         type: "success",
       });
 
-      //从购物车中移除商品
+      //remove product from cart
       const newCartProducts = cartProducts.filter(
         (product) => product.cart_id != cartProduct.cart_id
       );
@@ -52,16 +51,14 @@ const CartCard = ({customerId,cartProduct, cartProducts, Remove }: props) => {
   }, [status, message, error]);
 
   const onClick = () => {
-    //1.发送POST请求。
+    //1.send post request
     const order = {
       goodsId: cartProduct.id,
       customerId:customerId,
       quantity: cartProduct.quantity,
     };
-    //这里还差发送POST的逻辑
     PostSender(ENDPOINT, order, setStatus, setMessage, setError);
 
-    //2.从购物车中删除该商品.
   };
 
   return (
