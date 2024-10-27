@@ -58,7 +58,7 @@ const SignIn = () => {
             </Card.Header>
             <Card.Body>
               <Stack gap="4" w="full">
-                <Field label="Email" invalid={!!errors.EmailAddress}>
+                <Field label="Username" invalid={!!errors.EmailAddress}>
                   <Input
                     {...register("Username", {
                       required: "username is required",
