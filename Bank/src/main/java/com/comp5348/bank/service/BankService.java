@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit;
 
 @GrpcService
 @Service
-@Slf4j
+@Slf4j(topic = "com.comp5348.bank")
 public class BankService extends BankServiceGrpc.BankServiceImplBase {
 
     private final AccountRepository accountRepository;

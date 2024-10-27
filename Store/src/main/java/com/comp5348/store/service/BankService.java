@@ -25,7 +25,7 @@ import static com.comp5348.store.model.Transaction.TransactionStatus.*;
 
 
 @Service
-@Slf4j
+@Slf4j(topic = "com.comp5348.store")
 @LocalTCC
 public class BankService {
 
