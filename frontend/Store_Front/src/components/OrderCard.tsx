@@ -33,7 +33,7 @@ const OrderCard = ({ order, setStatusCode, setMessage, setError }: props) => {
   return (
     <Card.Root width="90% " variant="elevated" key={order.id}>
       <Card.Body gap="2">
-        <Card.Title mb="2">{order.Product_name}</Card.Title>
+        <Card.Title mb="2">orderId: {order.id}</Card.Title>
         <Card.Description>
           <HStack spaceX={20} justifyContent="space-between">
             <Box
@@ -52,8 +52,9 @@ const OrderCard = ({ order, setStatusCode, setMessage, setError }: props) => {
               color="balck"
               fontSize="lg"
             >
-              Total Price: ${order.totalPrice}
+              OrderDate: {JSON.stringify(order.orderDate)}
             </Box>
+           
             {/* <Button variant="surface" onClick={onClick}>
               Check Out
             </Button> */}
