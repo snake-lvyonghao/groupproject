@@ -58,12 +58,12 @@ public class OrderController {
             }
 
             // 捕获自定义的业务异常
-            if (e instanceof OrderRefundException) {
-                log.error("Refund failed: {}", e.getMessage());
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+            if (e.getCause() instanceof OrderRefundException) {
+                log.error("Refund failed: {}", e.getCause().getMessage());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getCause().getMessage());
             }
 
-            log.error("Unexpected error during refund: {}", e.getMessage());
+            log.error("Unexpected error during refund: {}", e.getCause().getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred.");
         }
     }
